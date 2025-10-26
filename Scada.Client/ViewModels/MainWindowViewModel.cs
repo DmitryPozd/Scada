@@ -48,6 +48,13 @@ public class MainWindowViewModel : ViewModelBase
     private ushort _motorAddress = 10;
     private ushort _valveAddress = 11;
     private ushort _fanAddress = 12;
+    
+    private bool _settingsLoaded;
+    public bool SettingsLoaded
+    {
+        get => _settingsLoaded;
+        private set => this.RaiseAndSetIfChanged(ref _settingsLoaded, value);
+    }
 
     public MainWindowViewModel()
     {
@@ -543,6 +550,9 @@ public class MainWindowViewModel : ViewModelBase
         {
             InitializeDefaultTags();
         }
+        
+        // Сигнализируем о завершении загрузки
+        SettingsLoaded = true;
     }
     
     private void InitializeDefaultTags()

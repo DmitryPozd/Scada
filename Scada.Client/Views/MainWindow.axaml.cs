@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reactive.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -29,7 +30,24 @@ public partial class MainWindow : Window
     private void OnWindowLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         SubscribeToButtonEvents(this);
-        RestoreMnemoschemeElements();
+        
+        // Подписываемся на завершение загрузки настроек
+        if (DataContext is MainWindowViewModel vm)
+        {
+            if (vm.SettingsLoaded)
+            {
+                // Настройки уже загружены
+                RestoreMnemoschemeElements();
+            }
+            else
+            {
+                // Ждём загрузки настроек
+                vm.WhenAnyValue(x => x.SettingsLoaded)
+                    .Where(loaded => loaded)
+                    .Take(1)
+                    .Subscribe(_ => RestoreMnemoschemeElements());
+            }
+        }
     }
 
     private void RestoreMnemoschemeElements()
