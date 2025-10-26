@@ -17,7 +17,7 @@ Avalonia UI desktop SCADA application for Modbus TCP controller communication. B
 **Project structure**:
 ```
 Scada.Client/
-├── Models/          ModbusConnectionConfig, TagDefinition, TagEnums (RegisterType, DataType, WordOrder), CoilButtonInfo
+├── Models/          ModbusConnectionConfig, TagDefinition, TagEnums (RegisterType, DataType, WordOrder), CoilButtonInfo, MnemoschemeElement hierarchy
 ├── ViewModels/      ViewModelBase, MainWindowViewModel, SettingsWindowViewModel
 ├── Views/           MainWindow.axaml, SettingsWindow.axaml
 │   └── Controls/    PumpControl, ValveControl, SensorIndicator, CoilButton, ImageButton, DraggableControl (mnemoscheme UI components)
@@ -87,8 +87,10 @@ dotnet build -c Release
 
 **Settings persistence**:
 - JSON file: `%AppData%\Scada.Client\settings.json`
-- `ISettingsService` / `SettingsService` handle async load/save of `ModbusConnectionConfig` (includes Tags collection).
-- Loaded on app startup, saved on config changes.
+- `ISettingsService` / `SettingsService` handle async load/save of `ModbusConnectionConfig` (includes Tags + MnemoschemeElements collections).
+- Loaded on app startup, saved on window closing.
+- **Polymorphic serialization**: `MnemoschemeElement` base class uses `[JsonPolymorphic]` and `[JsonDerivedType]` attributes for proper deserialization of derived types (`CoilElement`, `PumpElement`, `ValveElement`, `SensorElement`).
+- Settings.json includes `"$type"` discriminator field for each mnemoscheme element to preserve type information.
 
 **External dependencies**:
 - Avalonia + ReactiveUI NuGet packages (auto-restored).
