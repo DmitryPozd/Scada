@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:self="using:Scada.Client.Views.Controls"
+             x:Class="Scada.Client.Views.Controls.ValveControl"
+             Width="180" Height="140">
+  <Border x:Name="Root" 
+          CornerRadius="8" 
+          Padding="8" 
+          Background="{DynamicResource ControlFillColorDefaultBrush}" 
+          BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
+          BorderThickness="1">
+    <StackPanel Spacing="8">
+      <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=self:ValveControl}}"
+                 FontWeight="Bold" HorizontalAlignment="Center"/>
+
+      <Rectangle Height="40" RadiusX="6" RadiusY="6" Stroke="#9CA3AF" StrokeThickness="2"/>
+      <ProgressBar Minimum="0" Maximum="100" Height="8" Value="{Binding OpenPercent, RelativeSource={RelativeSource AncestorType=self:ValveControl}}"/>
+      <TextBlock Text="{Binding OpenPercent, RelativeSource={RelativeSource AncestorType=self:ValveControl}, StringFormat='Открыт: {0:0}%'}"
+                 Foreground="#6B7280" HorizontalAlignment="Center"/>
+    </StackPanel>
+  </Border>
+
+  <Border.BorderBrush>
+    <Binding Path="HasAlarm" RelativeSource="{RelativeSource AncestorType=self:ValveControl}">
+      <Binding.Converter>
+        <self:AlarmStrokeBrushConverter/>
+      </Binding.Converter>
+    </Binding>
+  </Border.BorderBrush>
+  <Border.BorderThickness>
+    <Binding Path="HasAlarm" RelativeSource="{RelativeSource AncestorType=self:ValveControl}">
+      <Binding.Converter>
+        <self:AlarmStrokeThicknessConverter/>
+      </Binding.Converter>
+    </Binding>
+  </Border.BorderThickness>
+</UserControl>

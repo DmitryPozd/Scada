@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Scada.Client.Views.Controls"
+             x:Class="Scada.Client.Views.Controls.PumpControl"
+             Width="140" Height="140">
+  <Border x:Name="Root" 
+          CornerRadius="8" 
+          Padding="8" 
+          Background="{DynamicResource ControlFillColorDefaultBrush}" 
+          BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
+          BorderThickness="1">
+    <StackPanel Spacing="8" HorizontalAlignment="Center">
+  <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:PumpControl}}"
+                 FontWeight="Bold" HorizontalAlignment="Center"/>
+      <Grid Width="70" Height="70">
+        <Ellipse>
+          <Ellipse.Fill>
+            <Binding Path="IsRunning" RelativeSource="{RelativeSource AncestorType=controls:PumpControl}">
+              <Binding.Converter>
+                <controls:RunningFillConverter/>
+              </Binding.Converter>
+            </Binding>
+          </Ellipse.Fill>
+          <Ellipse.Stroke>
+            <Binding Path="HasAlarm" RelativeSource="{RelativeSource AncestorType=controls:PumpControl}">
+              <Binding.Converter>
+                <controls:AlarmStrokeBrushConverter/>
+              </Binding.Converter>
+            </Binding>
+          </Ellipse.Stroke>
+          <Ellipse.StrokeThickness>
+            <Binding Path="HasAlarm" RelativeSource="{RelativeSource AncestorType=controls:PumpControl}">
+              <Binding.Converter>
+                <controls:AlarmStrokeThicknessConverter/>
+              </Binding.Converter>
+            </Binding>
+          </Ellipse.StrokeThickness>
+        </Ellipse>
+        <TextBlock Text="P" FontSize="28" FontWeight="Bold" Foreground="White"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+      </Grid>
+      <TextBlock x:Name="Status" Foreground="#6B7280" HorizontalAlignment="Center">
+        <TextBlock.Text>
+          <MultiBinding>
+            <Binding Path="HasAlarm" RelativeSource="{RelativeSource AncestorType=controls:PumpControl}"/>
+            <Binding Path="IsRunning" RelativeSource="{RelativeSource AncestorType=controls:PumpControl}"/>
+            <MultiBinding.Converter>
+              <controls:StatusTextConverter/>
+            </MultiBinding.Converter>
+          </MultiBinding>
+        </TextBlock.Text>
+      </TextBlock>
+    </StackPanel>
+  </Border>
+</UserControl>

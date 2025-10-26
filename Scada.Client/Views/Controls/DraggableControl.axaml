@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="200" d:DesignHeight="100"
+             x:Class="Scada.Client.Views.Controls.DraggableControl"
+             x:DataType="controls:DraggableControl"
+             xmlns:controls="using:Scada.Client.Views.Controls">
+  
+  <Border Background="{DynamicResource ControlFillColorTransparentBrush}" 
+          BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
+          BorderThickness="1"
+          CornerRadius="4"
+          Padding="4">
+    <ContentPresenter Content="{Binding $parent[controls:DraggableControl].Content}"/>
+  </Border>
+  
+</UserControl>

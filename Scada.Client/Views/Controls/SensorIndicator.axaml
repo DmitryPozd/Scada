@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Scada.Client.Views.Controls"
+             x:Class="Scada.Client.Views.Controls.SensorIndicator"
+             Width="200" Height="140">
+  <Border CornerRadius="8" 
+          Padding="8" 
+          Background="{DynamicResource ControlFillColorDefaultBrush}" 
+          BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
+          BorderThickness="1">
+    <StackPanel Spacing="6">
+  <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:SensorIndicator}}"
+                 FontWeight="Bold"/>
+      <StackPanel Orientation="Horizontal" Spacing="6">
+  <TextBlock x:Name="ValueText"
+       Text="{Binding Value, RelativeSource={RelativeSource AncestorType=controls:SensorIndicator}, StringFormat=0.##}"
+                   FontSize="22" FontWeight="Bold">
+          <TextBlock.Foreground>
+            <MultiBinding>
+              <Binding Path="Value" RelativeSource="{RelativeSource AncestorType=controls:SensorIndicator}"/>
+              <Binding Path="ThresholdLow" RelativeSource="{RelativeSource AncestorType=controls:SensorIndicator}"/>
+              <Binding Path="ThresholdHigh" RelativeSource="{RelativeSource AncestorType=controls:SensorIndicator}"/>
+              <MultiBinding.Converter>
+                <controls:SensorValueBrushConverter/>
+              </MultiBinding.Converter>
+            </MultiBinding>
+          </TextBlock.Foreground>
+        </TextBlock>
+  <TextBlock Text="{Binding Unit, RelativeSource={RelativeSource AncestorType=controls:SensorIndicator}}"
+                   VerticalAlignment="Bottom" Foreground="#6B7280"/>
+      </StackPanel>
+      <TextBlock>
+        <TextBlock.Text>
+          <MultiBinding>
+            <Binding Path="Value" RelativeSource="{RelativeSource AncestorType=controls:SensorIndicator}"/>
+            <Binding Path="ThresholdLow" RelativeSource="{RelativeSource AncestorType=controls:SensorIndicator}"/>
+            <Binding Path="ThresholdHigh" RelativeSource="{RelativeSource AncestorType=controls:SensorIndicator}"/>
+            <MultiBinding.Converter>
+              <controls:SensorStatusTextConverter/>
+            </MultiBinding.Converter>
+          </MultiBinding>
+        </TextBlock.Text>
+      </TextBlock>
+    </StackPanel>
+  </Border>
+</UserControl>

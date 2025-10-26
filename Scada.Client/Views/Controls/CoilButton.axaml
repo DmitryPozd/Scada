@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Scada.Client.Views.Controls"
+             x:Class="Scada.Client.Views.Controls.CoilButton"
+             Width="120" Height="120">
+  <Border x:Name="Root" 
+          CornerRadius="8" 
+          Padding="10" 
+          Background="{DynamicResource ControlFillColorDefaultBrush}" 
+          BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
+          BorderThickness="1">
+    <StackPanel Spacing="8" HorizontalAlignment="Center">
+      <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:CoilButton}}"
+                 FontWeight="SemiBold" HorizontalAlignment="Center" FontSize="12"/>
+      
+      <!-- Визуальный индикатор состояния -->
+      <Border Width="60" Height="40" CornerRadius="6" BorderThickness="2">
+        <Border.BorderBrush>
+          <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
+            <Binding.Converter>
+              <controls:CoilStateBorderConverter/>
+            </Binding.Converter>
+          </Binding>
+        </Border.BorderBrush>
+        <Border.Background>
+          <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
+            <Binding.Converter>
+              <controls:CoilStateBackgroundConverter/>
+            </Binding.Converter>
+          </Binding>
+        </Border.Background>
+        <Grid>
+          <!-- Иконка состояния -->
+          <TextBlock FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold">
+            <TextBlock.Text>
+              <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
+                <Binding.Converter>
+                  <controls:CoilStateIconConverter/>
+                </Binding.Converter>
+              </Binding>
+            </TextBlock.Text>
+            <TextBlock.Foreground>
+              <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
+                <Binding.Converter>
+                  <controls:CoilStateTextColorConverter/>
+                </Binding.Converter>
+              </Binding>
+            </TextBlock.Foreground>
+          </TextBlock>
+        </Grid>
+      </Border>
+
+      <!-- Кнопки управления -->
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="5">
+        <Button Grid.Column="0" Content="ON" FontSize="10" Padding="8,4"
+                Command="{Binding OnCommand, RelativeSource={RelativeSource AncestorType=controls:CoilButton}}"
+                Classes="accent" FontWeight="SemiBold"/>
+        <Button Grid.Column="1" Content="OFF" FontSize="10" Padding="8,4"
+                Command="{Binding OffCommand, RelativeSource={RelativeSource AncestorType=controls:CoilButton}}"
+                Background="#EF4444" Foreground="White" FontWeight="SemiBold"/>
+      </Grid>
+    </StackPanel>
+  </Border>
+</UserControl>
