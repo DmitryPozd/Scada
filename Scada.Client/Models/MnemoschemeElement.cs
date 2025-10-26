@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace Scada.Client.Models;
 
@@ -17,6 +18,11 @@ public enum ElementType
 /// <summary>
 /// Базовый класс для элемента мнемосхемы
 /// </summary>
+[JsonDerivedType(typeof(CoilElement), typeDiscriminator: "coil")]
+[JsonDerivedType(typeof(PumpElement), typeDiscriminator: "pump")]
+[JsonDerivedType(typeof(ValveElement), typeDiscriminator: "valve")]
+[JsonDerivedType(typeof(SensorElement), typeDiscriminator: "sensor")]
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 public class MnemoschemeElement
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
