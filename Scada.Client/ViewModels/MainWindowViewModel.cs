@@ -537,6 +537,82 @@ public class MainWindowViewModel : ViewModelBase
         {
             ConnectionConfig = loaded;
         }
+        
+        // Добавляем тестовые теги по умолчанию, если коллекция пустая
+        if (ConnectionConfig.Tags.Count == 0)
+        {
+            InitializeDefaultTags();
+        }
+    }
+    
+    private void InitializeDefaultTags()
+    {
+        // Coil теги для кнопок управления
+        ConnectionConfig.Tags.Add(new TagDefinition
+        {
+            Enabled = true,
+            Name = "Coil_0",
+            Address = 0,
+            Register = RegisterType.Coils,
+            Type = DataType.Bool
+        });
+        
+        ConnectionConfig.Tags.Add(new TagDefinition
+        {
+            Enabled = true,
+            Name = "Coil_1",
+            Address = 1,
+            Register = RegisterType.Coils,
+            Type = DataType.Bool
+        });
+        
+        ConnectionConfig.Tags.Add(new TagDefinition
+        {
+            Enabled = true,
+            Name = "Coil_2",
+            Address = 2,
+            Register = RegisterType.Coils,
+            Type = DataType.Bool
+        });
+        
+        ConnectionConfig.Tags.Add(new TagDefinition
+        {
+            Enabled = true,
+            Name = "Motor_Coil",
+            Address = 10,
+            Register = RegisterType.Coils,
+            Type = DataType.Bool
+        });
+        
+        ConnectionConfig.Tags.Add(new TagDefinition
+        {
+            Enabled = true,
+            Name = "Valve_Coil",
+            Address = 11,
+            Register = RegisterType.Coils,
+            Type = DataType.Bool
+        });
+        
+        ConnectionConfig.Tags.Add(new TagDefinition
+        {
+            Enabled = true,
+            Name = "Fan_Coil",
+            Address = 12,
+            Register = RegisterType.Coils,
+            Type = DataType.Bool
+        });
+        
+        // Holding register теги для датчиков
+        ConnectionConfig.Tags.Add(new TagDefinition
+        {
+            Enabled = true,
+            Name = "Pressure_Sensor",
+            Address = 100,
+            Register = RegisterType.Holding,
+            Type = DataType.UInt16,
+            Scale = 0.1,
+            Offset = 0
+        });
     }
 
     private Task SaveSettingsAsync()
