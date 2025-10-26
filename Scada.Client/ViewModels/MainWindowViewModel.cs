@@ -55,6 +55,8 @@ public class MainWindowViewModel : ViewModelBase
         get => _settingsLoaded;
         private set => this.RaiseAndSetIfChanged(ref _settingsLoaded, value);
     }
+    
+    public event EventHandler? SettingsLoadedEvent;
 
     public MainWindowViewModel()
     {
@@ -553,6 +555,7 @@ public class MainWindowViewModel : ViewModelBase
         
         // Сигнализируем о завершении загрузки
         SettingsLoaded = true;
+        SettingsLoadedEvent?.Invoke(this, EventArgs.Empty);
     }
     
     private void InitializeDefaultTags()

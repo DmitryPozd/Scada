@@ -31,34 +31,49 @@ public partial class MainWindow : Window
     {
         SubscribeToButtonEvents(this);
         
-        // Подписываемся на завершение загрузки настроек
+        // Подписываемся на событие завершения загрузки настроек
         if (DataContext is MainWindowViewModel vm)
         {
+            vm.SettingsLoadedEvent += (s, args) =>
+            {
+                System.Diagnostics.Debug.WriteLine("SettingsLoadedEvent fired, calling RestoreMnemoschemeElements");
+                RestoreMnemoschemeElements();
+            };
+            
+            // Если настройки уже загружены (синхронный путь)
             if (vm.SettingsLoaded)
             {
-                // Настройки уже загружены
+                System.Diagnostics.Debug.WriteLine("Settings already loaded, calling RestoreMnemoschemeElements immediately");
                 RestoreMnemoschemeElements();
-            }
-            else
-            {
-                // Ждём загрузки настроек
-                vm.WhenAnyValue(x => x.SettingsLoaded)
-                    .Where(loaded => loaded)
-                    .Take(1)
-                    .Subscribe(_ => RestoreMnemoschemeElements());
             }
         }
     }
 
     private void RestoreMnemoschemeElements()
     {
-        if (DataContext is not MainWindowViewModel vm) return;
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            System.Diagnostics.Debug.WriteLine("RestoreMnemoschemeElements: DataContext is not MainWindowViewModel");
+            return;
+        }
+        
         var canvas = this.FindControl<Canvas>("MnemoCanvas");
-        if (canvas == null) return;
+        if (canvas == null)
+        {
+            System.Diagnostics.Debug.WriteLine("RestoreMnemoschemeElements: Canvas not found!");
+            return;
+        }
+        
+        System.Diagnostics.Debug.WriteLine($"RestoreMnemoschemeElements: Found {vm.ConnectionConfig.MnemoschemeElements.Count} saved elements");
         
         // Если нет сохранённых элементов, оставляем статические из AXAML
-        if (vm.ConnectionConfig.MnemoschemeElements.Count == 0) return;
+        if (vm.ConnectionConfig.MnemoschemeElements.Count == 0)
+        {
+            System.Diagnostics.Debug.WriteLine("RestoreMnemoschemeElements: No saved elements, keeping AXAML static elements");
+            return;
+        }
         
+        System.Diagnostics.Debug.WriteLine("RestoreMnemoschemeElements: Clearing canvas and restoring elements...");
         canvas.Children.Clear();
         foreach (var element in vm.ConnectionConfig.MnemoschemeElements)
         {
@@ -295,12 +310,24 @@ public partial class MainWindow : Window
     private void CollectMnemoschemeElements(MainWindowViewModel vm)
     {
         var canvas = this.FindControl<Canvas>("MnemoCanvas");
-        if (canvas == null) return;
+        if (canvas == null)
+        {
+            System.Diagnostics.Debug.WriteLine("CollectMnemoschemeElements: Canvas not found!");
+            return;
+        }
+        
+        System.Diagnostics.Debug.WriteLine($"CollectMnemoschemeElements: Canvas has {canvas.Children.Count} children");
+        
         vm.ConnectionConfig.MnemoschemeElements.Clear();
         foreach (var child in canvas.Children)
         {
+            System.Diagnostics.Debug.WriteLine($"  Child type: {child.GetType().Name}");
+            
             if (child is not DraggableControl draggable) continue;
+            
             var element = draggable.Content;
+            System.Diagnostics.Debug.WriteLine($"    DraggableControl contains: {element?.GetType().Name}");
+            
             MnemoschemeElement? mnemoElement = null;
             if (element is CoilButton coilBtn)
             {
