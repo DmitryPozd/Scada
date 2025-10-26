@@ -295,6 +295,41 @@ public partial class MainWindow : Window
         if (result && DataContext is MainWindowViewModel vm)
         {
             vm.ConnectionConfig = settingsVm.ConnectionConfig;
+            // Обновляем AvailableTags у всех кнопок на мнемосхеме
+            UpdateButtonAvailableTags(vm);
+        }
+    }
+
+    private void UpdateButtonAvailableTags(MainWindowViewModel vm)
+    {
+        var canvas = this.FindControl<Canvas>("MnemoCanvas");
+        if (canvas == null) return;
+
+        foreach (var child in canvas.Children)
+        {
+            if (child is DraggableControl draggable)
+            {
+                if (draggable.Content is CoilButton coilBtn)
+                {
+                    var selectedTagName = coilBtn.SelectedTag?.Name;
+                    coilBtn.AvailableTags = vm.ConnectionConfig.Tags;
+                    // Восстанавливаем выбранный тег по имени
+                    if (!string.IsNullOrEmpty(selectedTagName))
+                    {
+                        coilBtn.SelectedTag = vm.ConnectionConfig.Tags.FirstOrDefault(t => t.Name == selectedTagName);
+                    }
+                }
+                else if (draggable.Content is ImageButton imgBtn)
+                {
+                    var selectedTagName = imgBtn.SelectedTag?.Name;
+                    imgBtn.AvailableTags = vm.ConnectionConfig.Tags;
+                    // Восстанавливаем выбранный тег по имени
+                    if (!string.IsNullOrEmpty(selectedTagName))
+                    {
+                        imgBtn.SelectedTag = vm.ConnectionConfig.Tags.FirstOrDefault(t => t.Name == selectedTagName);
+                    }
+                }
+            }
         }
     }
 
