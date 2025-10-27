@@ -166,8 +166,8 @@ public partial class ImageButton : UserControl
         var dialog = new Window
         {
             Title = "Настройки устройства",
-            Width = 380,
-            Height = 320,
+            Width = 450,
+            Height = 380,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };
@@ -350,8 +350,8 @@ public partial class ImageButton : UserControl
         var dialog = new Window
         {
             Title = "Изменить адрес Coil",
-            Width = 300,
-            Height = 150,
+            Width = 350,
+            Height = 180,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };

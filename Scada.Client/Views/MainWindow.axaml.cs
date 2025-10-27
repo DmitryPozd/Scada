@@ -34,6 +34,10 @@ public partial class MainWindow : Window
         // Подписываемся на событие завершения загрузки настроек
         if (DataContext is MainWindowViewModel vm)
         {
+            // Подписка на обновление Coil тегов
+            vm.CoilTagsUpdated += OnCoilTagsUpdated;
+            this.Title = "SCADA - Подписка на CoilTagsUpdated выполнена!";
+            
             vm.SettingsLoadedEvent += (s, args) =>
             {
                 System.Diagnostics.Debug.WriteLine("SettingsLoadedEvent fired, calling RestoreMnemoschemeElements");
@@ -47,6 +51,68 @@ public partial class MainWindow : Window
                 RestoreMnemoschemeElements();
             }
         }
+        else
+        {
+            this.Title = "SCADA - ERROR: DataContext is NOT MainWindowViewModel!";
+        }
+    }
+
+    private void OnCoilTagsUpdated(object? sender, Dictionary<ushort, bool> coilValues)
+    {
+        System.Diagnostics.Debug.WriteLine($"OnCoilTagsUpdated: received {coilValues.Count} coil values");
+        
+        // Временно для отладки - показываем в заголовке окна
+        this.Title = $"SCADA - Получено {coilValues.Count} coils: {string.Join(", ", coilValues.Select(kv => $"{kv.Key}={kv.Value}"))}";
+        
+        foreach (var kv in coilValues)
+        {
+            System.Diagnostics.Debug.WriteLine($"  Coil {kv.Key} = {kv.Value}");
+        }
+        
+        var canvas = this.FindControl<Canvas>("MnemoCanvas");
+        if (canvas == null)
+        {
+            System.Diagnostics.Debug.WriteLine("OnCoilTagsUpdated: Canvas not found!");
+            this.Title = "SCADA - Canvas NOT FOUND!";
+            return;
+        }
+
+        int updatedCount = 0;
+        int totalButtons = 0;
+        foreach (var child in canvas.Children)
+        {
+            if (child is DraggableControl draggable)
+            {
+                if (draggable.Content is CoilButton coilBtn)
+                {
+                    totalButtons++;
+                    if (coilValues.TryGetValue(coilBtn.CoilAddress, out bool value))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Updating CoilButton at address {coilBtn.CoilAddress} to {value}, WAS: {coilBtn.IsActive}");
+                        coilBtn.IsActive = value;
+                        updatedCount++;
+                    }
+                }
+                else if (draggable.Content is ImageButton imgBtn)
+                {
+                    totalButtons++;
+                    if (coilValues.TryGetValue(imgBtn.CoilAddress, out bool value))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Updating ImageButton '{imgBtn.Label}' at address {imgBtn.CoilAddress} to {value}, WAS: {imgBtn.IsActive}");
+                        var oldValue = imgBtn.IsActive;
+                        imgBtn.IsActive = value;
+                        System.Diagnostics.Debug.WriteLine($"  ImageButton '{imgBtn.Label}' AFTER update: {imgBtn.IsActive}");
+                        updatedCount++;
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  ImageButton '{imgBtn.Label}' at address {imgBtn.CoilAddress} - NO MATCH in coilValues");
+                    }
+                }
+            }
+        }
+        this.Title = $"SCADA - Обновлено {updatedCount}/{totalButtons} кнопок";
+        System.Diagnostics.Debug.WriteLine($"OnCoilTagsUpdated: updated {updatedCount} out of {totalButtons} buttons");
     }
 
     private void RestoreMnemoschemeElements()

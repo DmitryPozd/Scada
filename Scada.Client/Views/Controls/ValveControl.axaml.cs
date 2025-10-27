@@ -56,8 +56,8 @@ public partial class ValveControl : UserControl
         var dialog = new Window
         {
             Title = "Настройки клапана",
-            Width = 350,
-            Height = 180,
+            Width = 400,
+            Height = 200,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };

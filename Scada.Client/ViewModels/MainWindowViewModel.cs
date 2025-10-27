@@ -26,6 +26,9 @@ public class MainWindowViewModel : ViewModelBase
     private bool _isPolling;
     private int _pollingIntervalMs = 1000;
 
+    // Event for coil tags update
+    public event EventHandler<Dictionary<ushort, bool>>? CoilTagsUpdated;
+
     // Mnemoscheme properties
     private bool _pump1Running;
     private bool _pump1Alarm;
@@ -377,10 +380,12 @@ public class MainWindowViewModel : ViewModelBase
             await PollGroupAsync(enabled, RegisterType.Holding);
             await PollGroupAsync(enabled, RegisterType.Input);
             await PollGroupCoilsAsync(enabled);
+            // НЕ перезаписываем статус - оставляем сообщение из PollGroupCoilsAsync
         }
         catch (Exception ex)
         {
-            ConnectionStatus = $"Ошибка опроса: {ex.Message}";
+            ConnectionStatus = $"⚠ Ошибка опроса: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"PollTagsOnceAsync exception: {ex}");
         }
     }
 
@@ -504,38 +509,85 @@ public class MainWindowViewModel : ViewModelBase
 
     private async Task PollGroupCoilsAsync(System.Collections.ObjectModel.ObservableCollection<TagDefinition> tags)
     {
+        // Отладка: показываем ВСЕ теги
+        var allTags = tags.ToList();
+        var coilTags = tags.Where(t => t.Register == RegisterType.Coils).ToList();
+        var enabledCoilTags = tags.Where(t => t.Enabled && t.Register == RegisterType.Coils).ToList();
+        
+        ConnectionStatus = $"Всего тегов: {allTags.Count}, Coils: {coilTags.Count}, Enabled Coils: {enabledCoilTags.Count}";
+        
         var group = tags.Where(t => t.Enabled && t.Register == RegisterType.Coils).OrderBy(t => t.Address).ToList();
-        if (group.Count == 0) return;
-
-        ushort min = group.Min(t => t.Address);
-        int max = group.Max(t => t.Address); // coils are 1 bit each
-        int count = max - min + 1;
-
-        var block = await _modbusService.ReadCoilsAsync(min, (ushort)count);
-
-        foreach (var tag in group)
+        
+        if (group.Count == 0)
         {
-            int offset = tag.Address - min;
-            bool bit = block[offset];
-            double val = bit ? 1.0 : 0.0;
-            val = val * tag.Scale + tag.Offset;
-            tag.Value = val;
+            ConnectionStatus = $"⚠ НЕТ включённых Coil тегов! Всего тегов: {allTags.Count}, Coils тегов: {coilTags.Count}. Откройте Настройки → включите галочки у Coil тегов";
+            return;
+        }
+        
+        ConnectionStatus = $"Найдено {group.Count} включённых Coil тегов (адреса: {string.Join(",", group.Select(t => t.Address))})";
 
-            switch (tag.Name)
+
+        try
+        {
+            // Словарь для хранения адресов coil и их значений
+            var coilValues = new Dictionary<ushort, bool>();
+
+            // Читаем каждый Coil ОТДЕЛЬНО, а не блоком (чтобы избежать ошибок с недоступными адресами)
+            foreach (var tag in group)
             {
-                case "Pump1Running":
-                    Pump1Running = bit;
-                    break;
-                case "Pump1Alarm":
-                    Pump1Alarm = bit;
-                    break;
-                case "Valve1Percent":
-                    Valve1OpenPercent = val;
-                    break;
-                case "Sensor1Value":
-                    Sensor1Value = val;
-                    break;
+                try
+                {
+                    var result = await _modbusService.ReadCoilsAsync(tag.Address, 1);
+                    bool bit = result[0];
+                    double val = bit ? 1.0 : 0.0;
+                    val = val * tag.Scale + tag.Offset;
+                    tag.Value = val;
+
+                    // Добавляем в словарь для обновления кнопок
+                    coilValues[tag.Address] = bit;
+
+                    switch (tag.Name)
+                    {
+                        case "Pump1Running":
+                            Pump1Running = bit;
+                            break;
+                        case "Pump1Alarm":
+                            Pump1Alarm = bit;
+                            break;
+                        case "Valve1Percent":
+                            Valve1OpenPercent = val;
+                            break;
+                        case "Sensor1Value":
+                            Sensor1Value = val;
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Ошибка чтения конкретного Coil - пропускаем и идём дальше
+                    System.Diagnostics.Debug.WriteLine($"Failed to read Coil at address {tag.Address}: {ex.Message}");
+                }
             }
+
+            // Уведомляем подписчиков об обновлении значений coils
+            if (CoilTagsUpdated != null)
+            {
+                CoilTagsUpdated.Invoke(this, coilValues);
+                ConnectionStatus = $"✓ Опрос: обновлено {coilValues.Count} из {group.Count} coils";
+            }
+            else
+            {
+                ConnectionStatus = $"Опрос: {coilValues.Count} coils (подписчиков НЕТ!)";
+            }
+        }
+        catch (Exception ex)
+        {
+            // Ошибка чтения Coils не должна ломать весь опрос
+            var errorMsg = ex.Message.Contains("allowable address")
+                ? $"Недоступные адреса Coils ({group.Min(t => t.Address)}-{group.Max(t => t.Address)}). Проверьте настройки тегов."
+                : ex.Message;
+            ConnectionStatus = $"⚠ Ошибка опроса Coils: {errorMsg}";
+            System.Diagnostics.Debug.WriteLine($"PollGroupCoilsAsync failed: {ex}");
         }
     }
 
@@ -644,10 +696,14 @@ public class MainWindowViewModel : ViewModelBase
             SelectedTag.Value = value ? 1.0 : 0.0;
             if (SelectedTag.Name == "Pump1Running") Pump1Running = value;
             if (SelectedTag.Name == "Pump1Alarm") Pump1Alarm = value;
+            ConnectionStatus = $"Coil {RegisterAddress} записан: {(value ? "ON" : "OFF")}";
         }
         catch (Exception ex)
         {
-            ConnectionStatus = $"Ошибка записи coil: {ex.Message}";
+            var errorMsg = ex.Message.Contains("allowable address") 
+                ? $"Адрес {RegisterAddress} недоступен на сервере." 
+                : ex.Message;
+            ConnectionStatus = $"⚠ Ошибка записи Coil {RegisterAddress}: {errorMsg}";
         }
     }
 
@@ -660,10 +716,14 @@ public class MainWindowViewModel : ViewModelBase
             ushort address = getAddress();
             await _modbusService.WriteCoilAsync(address, value);
             updateState(value);
+            ConnectionStatus = $"Coil {address} записан: {(value ? "ON" : "OFF")}";
         }
         catch (Exception ex)
         {
-            ConnectionStatus = $"Ошибка записи coil {getAddress()}: {ex.Message}";
+            var errorMsg = ex.Message.Contains("allowable address") 
+                ? $"Адрес {getAddress()} недоступен на сервере." 
+                : ex.Message;
+            ConnectionStatus = $"⚠ Ошибка записи: {errorMsg}";
         }
     }
 
@@ -673,14 +733,24 @@ public class MainWindowViewModel : ViewModelBase
     public async Task WriteCoilAsync(ushort address, bool value)
     {
         if (!IsConnected)
+        {
+            ConnectionStatus = "Ошибка: не подключен к серверу";
             return;
+        }
         try
         {
             await _modbusService.WriteCoilAsync(address, value);
+            ConnectionStatus = $"Coil {address} записан: {(value ? "ON" : "OFF")}";
         }
         catch (Exception ex)
         {
-            ConnectionStatus = $"Ошибка записи coil {address}: {ex.Message}";
+            var errorMsg = ex.Message.Contains("allowable address") 
+                ? $"Адрес {address} недоступен на сервере. Проверьте диапазон доступных Coil адресов." 
+                : ex.Message;
+            ConnectionStatus = $"⚠ Ошибка записи Coil {address}: {errorMsg}";
+            
+            // Логируем для отладки
+            System.Diagnostics.Debug.WriteLine($"WriteCoilAsync failed: address={address}, value={value}, error={ex.Message}");
         }
     }
 

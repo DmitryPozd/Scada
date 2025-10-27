@@ -54,8 +54,8 @@ public partial class SensorIndicator : UserControl
         var dialog = new Window
         {
             Title = "Настройки датчика",
-            Width = 350,
-            Height = 180,
+            Width = 400,
+            Height = 200,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };

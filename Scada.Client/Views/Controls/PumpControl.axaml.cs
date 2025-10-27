@@ -60,8 +60,8 @@ public partial class PumpControl : UserControl
         var dialog = new Window
         {
             Title = "Настройки насоса",
-            Width = 350,
-            Height = 180,
+            Width = 400,
+            Height = 200,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };
