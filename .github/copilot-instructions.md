@@ -1,6 +1,6 @@
 # Copilot instructions for this repository
 
-Last updated: 2025-10-27
+Last updated: 2025-10-31
 
 Avalonia UI desktop SCADA application for Modbus TCP controller communication. Built with .NET 8, ReactiveUI MVVM, and FluentModbus client.
 
@@ -20,7 +20,7 @@ Scada.Client/
 ├── Models/          ModbusConnectionConfig, TagDefinition, TagEnums (RegisterType, DataType, WordOrder), CoilButtonInfo, MnemoschemeElement hierarchy
 ├── ViewModels/      ViewModelBase, MainWindowViewModel, SettingsWindowViewModel
 ├── Views/           MainWindow.axaml, SettingsWindow.axaml
-│   └── Controls/    PumpControl, ValveControl, SensorIndicator, CoilButton, ImageButton, DraggableControl (mnemoscheme UI components)
+│   └── Controls/    PumpControl, ValveControl, SensorIndicator, CoilButton, ImageButton, InputBitsIndicator, DraggableControl (mnemoscheme UI components)
 └── Services/        IModbusClientService, ModbusClientService, ISettingsService, SettingsService
 ```
 
@@ -96,7 +96,7 @@ dotnet build -c Release
 - JSON file: `%AppData%\Scada.Client\settings.json`
 - `ISettingsService` / `SettingsService` handle async load/save of `ModbusConnectionConfig` (includes Tags + MnemoschemeElements collections).
 - Loaded on app startup, saved on window closing.
-- **Polymorphic serialization**: `MnemoschemeElement` base class uses `[JsonPolymorphic]` and `[JsonDerivedType]` attributes for proper deserialization of derived types (`CoilElement`, `PumpElement`, `ValveElement`, `SensorElement`).
+- **Polymorphic serialization**: `MnemoschemeElement` base class uses `[JsonPolymorphic]` and `[JsonDerivedType]` attributes for proper deserialization of derived types (`CoilElement`, `PumpElement`, `ValveElement`, `SensorElement`, `InputBitsElement`).
 - Settings.json includes `"$type"` discriminator field for each mnemoscheme element to preserve type information.
 
 **External dependencies**:
@@ -188,8 +188,23 @@ public bool IsRunning
 - Dynamic button command: `ReactiveCommand.CreateFromTask(async () => await vm.WriteCoilAsync(address, value))`.
 - Pattern supports both CoilButton and ImageButton types, preserving tag selection and visual style.
 
+**InputBitsIndicator pattern** (see `InputBitsIndicator.axaml/.axaml.cs`):
+- UserControl for displaying 8 input coils as colored bit indicators
+- **Visual display**: 8 squares with bit numbers, color-coded: Red (0/inactive), Green (1/active)
+- **StyledProperties**: `Label`, `StartAddress` (TwoWay), `BitCount`, `BitValues` (bool[] array)
+- **Programmatic ItemTemplate**: Uses `FuncDataTemplate<BitDisplayItem>` to create UI elements in code
+- **BitDisplayItem model**: Internal class with `BitNumber` (0-7), `Value` ("0"/"1"), `Color` (IBrush)
+- **ObservableCollection**: `Bits` collection auto-updates UI via `UpdateBitsDisplay()` method
+- **Right-click config**: Context menu for selecting Coil tag from available tags
+- **Auto-polling**: ViewModel calls `PollInputBitsAsync()` → reads 8 coils via `ReadCoilsAsync(startAddress, 8)`
+- **Reactive binding**: `vm.WhenAnyValue(x => x.InputBitsValues).Subscribe(values => indicator.BitValues = values)`
+- **Styling**: LightYellow background, Blue 3px border, MinWidth=180, MinHeight=80
+- **Save/restore**: `InputBitsElement` with `StartAddress`, `BitCount` properties serialized to JSON
+- **Usage**: Wrap in `DraggableControl`, bind `BitValues` to ViewModel property updated by polling
+
 ## Notes for agents
 
 - Always run `dotnet build` after file edits to catch errors early.
 - When adding Modbus operations, remember FluentModbus returns `Span<byte>`, not `ushort[]`.
+- When creating ItemTemplates programmatically, use `FuncDataTemplate<T>` for type-safe binding (see InputBitsIndicator).
 - Update this file when new patterns emerge (DI container, config file, logging, etc.).
