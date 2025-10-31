@@ -52,6 +52,10 @@ public class MainWindowViewModel : ViewModelBase
     private ushort _valveAddress = 11;
     private ushort _fanAddress = 12;
     
+    // Read coil button properties
+    private ushort _readCoilAddress = 100;
+    private bool? _readCoilValue;
+    
     private bool _settingsLoaded;
     public bool SettingsLoaded
     {
@@ -94,6 +98,9 @@ public class MainWindowViewModel : ViewModelBase
             ValveOffCommand = ReactiveCommand.CreateFromTask(async () => await WriteCoilWithAddressAsync(() => _valveAddress, false, v => ValveActive = v), canWrite);
             FanOnCommand = ReactiveCommand.CreateFromTask(async () => await WriteCoilWithAddressAsync(() => _fanAddress, true, v => FanActive = v), canWrite);
             FanOffCommand = ReactiveCommand.CreateFromTask(async () => await WriteCoilWithAddressAsync(() => _fanAddress, false, v => FanActive = v), canWrite);
+            
+            // Read coil command
+            ReadCoilCommand = ReactiveCommand.CreateFromTask(ReadCoilAsync, canWrite);
     }
 
     public string ConnectionStatus
@@ -140,6 +147,9 @@ public class MainWindowViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit>? ValveOffCommand { get; private set; }
     public ReactiveCommand<Unit, Unit>? FanOnCommand { get; private set; }
     public ReactiveCommand<Unit, Unit>? FanOffCommand { get; private set; }
+    
+    // Read coil command
+    public ReactiveCommand<Unit, Unit>? ReadCoilCommand { get; private set; }
 
     // Event to request settings window opening (handled in View code-behind)
     public event EventHandler? RequestOpenSettings;
@@ -369,6 +379,19 @@ public class MainWindowViewModel : ViewModelBase
     {
         get => _fanAddress;
         set => this.RaiseAndSetIfChanged(ref _fanAddress, value);
+    }
+
+    // Read coil button properties
+    public ushort ReadCoilAddress
+    {
+        get => _readCoilAddress;
+        set => this.RaiseAndSetIfChanged(ref _readCoilAddress, value);
+    }
+
+    public bool? ReadCoilValue
+    {
+        get => _readCoilValue;
+        set => this.RaiseAndSetIfChanged(ref _readCoilValue, value);
     }
 
     private async Task PollTagsOnceAsync()
@@ -704,6 +727,33 @@ public class MainWindowViewModel : ViewModelBase
                 ? $"Адрес {RegisterAddress} недоступен на сервере." 
                 : ex.Message;
             ConnectionStatus = $"⚠ Ошибка записи Coil {RegisterAddress}: {errorMsg}";
+        }
+    }
+
+    /// <summary>
+    /// Метод для чтения одной катушки
+    /// </summary>
+    private async Task ReadCoilAsync()
+    {
+        if (!IsConnected)
+        {
+            ConnectionStatus = "Ошибка: не подключен к серверу";
+            return;
+        }
+
+        try
+        {
+            bool value = await _modbusService.ReadCoilAsync(ReadCoilAddress);
+            ReadCoilValue = value;
+            ConnectionStatus = $"Coil {ReadCoilAddress} прочитан: {(value ? "ON" : "OFF")}";
+        }
+        catch (Exception ex)
+        {
+            ReadCoilValue = null;
+            var errorMsg = ex.Message.Contains("allowable address") 
+                ? $"Адрес {ReadCoilAddress} недоступен на сервере." 
+                : ex.Message;
+            ConnectionStatus = $"⚠ Ошибка чтения: {errorMsg}";
         }
     }
 

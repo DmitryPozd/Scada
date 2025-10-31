@@ -113,6 +113,18 @@ public class ModbusClientService : IModbusClientService, IDisposable
         });
     }
 
+    public async Task<bool> ReadCoilAsync(ushort address)
+    {
+        if (_client == null || !_client.IsConnected)
+            throw new InvalidOperationException("Modbus client is not connected.");
+
+        return await Task.Run(() =>
+        {
+            var bytes = _client.ReadCoils(_unitId, address, 1);
+            return (bytes[0] & 1) != 0;
+        });
+    }
+
     public void Dispose()
     {
         _client?.Dispose();

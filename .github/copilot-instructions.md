@@ -1,6 +1,6 @@
 # Copilot instructions for this repository
 
-Last updated: 2025-10-26
+Last updated: 2025-10-27
 
 Avalonia UI desktop SCADA application for Modbus TCP controller communication. Built with .NET 8, ReactiveUI MVVM, and FluentModbus client.
 
@@ -83,7 +83,14 @@ dotnet build -c Release
 - Operations: `ReadHoldingRegisters` returns `Span<byte>`; use `BinaryPrimitives.ReadUInt16BigEndian(...)` for ushort conversion.
 - Endianness: `ModbusEndianness.BigEndian` (standard Modbus)
 - Tag system: `TagDefinition` models support `RegisterType` (Holding/Input/Coils), `DataType` (UInt16/Int32/Float32/etc.), word-order swapping, scaling/offset.
-- Batch reads: contiguous tags grouped by register type, read as single block, parsed individually per tag's `DataType` and `WordOrder`.
+- **Coil polling strategy**: Each Coil is read INDIVIDUALLY (not as a block) to avoid errors with non-contiguous addresses. Handles large address gaps gracefully.
+- Individual coil reads with per-tag error handling prevent "allowable address" errors.
+
+**UI State Synchronization**:
+- `CoilTagsUpdated` event in `MainWindowViewModel`: fired after each Coil poll cycle with `Dictionary<ushort, bool>` of address→value pairs.
+- `OnCoilTagsUpdated` handler in `MainWindow.axaml.cs`: iterates Canvas children, updates `IsActive` property of all `CoilButton` and `ImageButton` controls.
+- Subscription happens in `OnWindowLoaded` - critical to establish before polling starts.
+- ImageButton (Motor/Valve/Fan) visual state now reflects real-time Modbus Coil values.
 
 **Settings persistence**:
 - JSON file: `%AppData%\Scada.Client\settings.json`

@@ -170,6 +170,15 @@
                                              OffCommand="{Binding FanOffCommand}"/>
                     </controls:DraggableControl>
 
+                    <!-- CoilReadButton -->
+                    <controls:DraggableControl X="50" Y="440">
+                        <controls:CoilReadButton Label="Чтение катушки"
+                                                CoilAddress="{Binding ReadCoilAddress, Mode=TwoWay}"
+                                                CoilValue="{Binding ReadCoilValue}"
+                                                AvailableTags="{Binding ConnectionConfig.Tags}"
+                                                ReadCommand="{Binding ReadCoilCommand}"/>
+                    </controls:DraggableControl>
+
                 </Canvas>
             </Grid>
         </Border>
