@@ -66,6 +66,9 @@ public partial class CoilReadButton : UserControl
     {
         InitializeComponent();
         
+        // Debug output
+        System.Diagnostics.Debug.WriteLine("CoilReadButton created!");
+        
         // Subscribe to CoilValue changes to update visual state
         this.GetObservable(CoilValueProperty).Subscribe(UpdateVisualState);
     }

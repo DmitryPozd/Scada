@@ -4,11 +4,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="using:Scada.Client.ViewModels"
     xmlns:controls="using:Scada.Client.Views.Controls"
-        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
         x:Class="Scada.Client.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="SCADA - Мнемосхема"
-        Width="900" Height="600">
+        Width="900" Height="700">
     
     <Grid RowDefinitions="Auto,*,Auto" Margin="10">
         <!-- Connection Status Bar -->
@@ -79,10 +79,14 @@
                 </Border>
 
                 <!-- Canvas for Mnemoscheme -->
-                <Canvas x:Name="MnemoCanvas" 
-                        Grid.Row="1" 
-                        Background="{DynamicResource LayerFillColorDefaultBrush}" 
-                        ClipToBounds="True">
+                <ScrollViewer Grid.Row="1" 
+                             HorizontalScrollBarVisibility="Auto"
+                             VerticalScrollBarVisibility="Auto">
+                    <Canvas x:Name="MnemoCanvas" 
+                            Width="1200" 
+                            Height="800"
+                            Background="{DynamicResource LayerFillColorDefaultBrush}" 
+                            ClipToBounds="False">
                     
                     <!-- Pump Control -->
                     <controls:DraggableControl X="50" Y="50">
@@ -170,16 +174,16 @@
                                              OffCommand="{Binding FanOffCommand}"/>
                     </controls:DraggableControl>
 
-                    <!-- CoilReadButton -->
-                    <controls:DraggableControl X="50" Y="440">
-                        <controls:CoilReadButton Label="Чтение катушки"
-                                                CoilAddress="{Binding ReadCoilAddress, Mode=TwoWay}"
-                                                CoilValue="{Binding ReadCoilValue}"
-                                                AvailableTags="{Binding ConnectionConfig.Tags}"
-                                                ReadCommand="{Binding ReadCoilCommand}"/>
+                    <!-- Input Bits Indicator -->
+                    <controls:DraggableControl X="50" Y="50" MinWidth="200" MinHeight="100">
+                        <controls:InputBitsIndicator Label="Входные биты"
+                                                    StartAddress="{Binding InputBitsStartAddress, Mode=TwoWay}"
+                                                    BitCount="8"
+                                                    BitValues="{Binding InputBitsValues}"/>
                     </controls:DraggableControl>
 
                 </Canvas>
+                </ScrollViewer>
             </Grid>
         </Border>
 

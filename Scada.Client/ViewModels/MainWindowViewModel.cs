@@ -4,6 +4,7 @@ using System.Reactive.Linq;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Avalonia.Media;
 using ReactiveUI;
 using Scada.Client.Models;
 using Scada.Client.Services;
@@ -55,6 +56,11 @@ public class MainWindowViewModel : ViewModelBase
     // Read coil button properties
     private ushort _readCoilAddress = 100;
     private bool? _readCoilValue;
+    private TagDefinition? _selectedCoilReadTag;
+    
+    // Input bits indicator properties
+    private ushort _inputBitsStartAddress = 0;
+    private bool[]? _inputBitsValues;
     
     private bool _settingsLoaded;
     public bool SettingsLoaded
@@ -394,6 +400,40 @@ public class MainWindowViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _readCoilValue, value);
     }
 
+    public TagDefinition? SelectedCoilReadTag
+    {
+        get => _selectedCoilReadTag;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedCoilReadTag, value);
+            if (value != null && value.Register == RegisterType.Coils)
+            {
+                ReadCoilAddress = value.Address;
+            }
+        }
+    }
+
+    public string CoilReadValueText => ReadCoilValue.HasValue 
+        ? (ReadCoilValue.Value ? "ON (1)" : "OFF (0)") 
+        : "?";
+
+    public IBrush CoilReadValueColor => ReadCoilValue.HasValue
+        ? (ReadCoilValue.Value ? Brushes.Green : Brushes.Red)
+        : Brushes.Gray;
+
+    // Input bits indicator properties
+    public ushort InputBitsStartAddress
+    {
+        get => _inputBitsStartAddress;
+        set => this.RaiseAndSetIfChanged(ref _inputBitsStartAddress, value);
+    }
+
+    public bool[]? InputBitsValues
+    {
+        get => _inputBitsValues;
+        set => this.RaiseAndSetIfChanged(ref _inputBitsValues, value);
+    }
+
     private async Task PollTagsOnceAsync()
     {
         try
@@ -403,6 +443,7 @@ public class MainWindowViewModel : ViewModelBase
             await PollGroupAsync(enabled, RegisterType.Holding);
             await PollGroupAsync(enabled, RegisterType.Input);
             await PollGroupCoilsAsync(enabled);
+            await PollInputBitsAsync();
             // НЕ перезаписываем статус - оставляем сообщение из PollGroupCoilsAsync
         }
         catch (Exception ex)
@@ -614,6 +655,23 @@ public class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private async Task PollInputBitsAsync()
+    {
+        if (!IsConnected) return;
+        
+        try
+        {
+            // Читаем 8 бит начиная с InputBitsStartAddress
+            var bits = await _modbusService.ReadCoilsAsync(InputBitsStartAddress, 8);
+            InputBitsValues = bits;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PollInputBitsAsync failed: {ex}");
+            // Не перезаписываем статус - это фоновая операция
+        }
+    }
+
     private async Task LoadSettingsAsync()
     {
         var loaded = await _settingsService.LoadAsync();
@@ -745,11 +803,15 @@ public class MainWindowViewModel : ViewModelBase
         {
             bool value = await _modbusService.ReadCoilAsync(ReadCoilAddress);
             ReadCoilValue = value;
+            this.RaisePropertyChanged(nameof(CoilReadValueText));
+            this.RaisePropertyChanged(nameof(CoilReadValueColor));
             ConnectionStatus = $"Coil {ReadCoilAddress} прочитан: {(value ? "ON" : "OFF")}";
         }
         catch (Exception ex)
         {
             ReadCoilValue = null;
+            this.RaisePropertyChanged(nameof(CoilReadValueText));
+            this.RaisePropertyChanged(nameof(CoilReadValueColor));
             var errorMsg = ex.Message.Contains("allowable address") 
                 ? $"Адрес {ReadCoilAddress} недоступен на сервере." 
                 : ex.Message;

@@ -200,6 +200,29 @@ public partial class MainWindow : Window
                         control = imgBtn;
                     }
                     break;
+                case CoilReadElement readElem:
+                    var readBtn = new CoilReadButton
+                    {
+                        Label = readElem.Label,
+                        CoilAddress = readElem.CoilAddress,
+                        AvailableTags = vm.ConnectionConfig.Tags,
+                        ReadCommand = vm.ReadCoilCommand
+                    };
+                    // Подписка на изменения CoilValue из ViewModel
+                    vm.WhenAnyValue(x => x.ReadCoilValue).Subscribe(value => readBtn.CoilValue = value);
+                    control = readBtn;
+                    break;
+                case InputBitsElement bitsElem:
+                    var bitsIndicator = new InputBitsIndicator
+                    {
+                        Label = bitsElem.Label,
+                        StartAddress = bitsElem.StartAddress,
+                        BitCount = bitsElem.BitCount
+                    };
+                    // Подписка на изменения InputBitsValues из ViewModel
+                    vm.WhenAnyValue(x => x.InputBitsValues).Subscribe(values => bitsIndicator.BitValues = values);
+                    control = bitsIndicator;
+                    break;
                 case PumpElement pumpElem:
                     control = new PumpControl { Label = pumpElem.Label };
                     break;
@@ -453,6 +476,27 @@ public partial class MainWindow : Window
                     CoilAddress = imgBtn.CoilAddress,
                     TagName = imgBtn.SelectedTag?.Name,
                     ImageType = imgBtn.ImageType.ToString()
+                };
+            }
+            else if (element is CoilReadButton readBtn)
+            {
+                mnemoElement = new CoilReadElement
+                {
+                    X = draggable.X,
+                    Y = draggable.Y,
+                    Label = readBtn.Label,
+                    CoilAddress = readBtn.CoilAddress
+                };
+            }
+            else if (element is InputBitsIndicator bitsIndicator)
+            {
+                mnemoElement = new InputBitsElement
+                {
+                    X = draggable.X,
+                    Y = draggable.Y,
+                    Label = bitsIndicator.Label,
+                    StartAddress = bitsIndicator.StartAddress,
+                    BitCount = bitsIndicator.BitCount
                 };
             }
             else if (element is PumpControl pump)
