@@ -1,0 +1,140 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Scada.Client.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="700"
+        x:Class="Scada.Client.Views.TagsEditorWindow"
+        x:DataType="vm:TagsEditorWindowViewModel"
+        Title="Редактор тегов"
+        Width="1200" Height="700"
+        WindowStartupLocation="CenterOwner">
+    
+    <Grid RowDefinitions="Auto,*,Auto" Margin="15">
+        <!-- Заголовок и кнопки управления -->
+        <StackPanel Grid.Row="0" Spacing="10" Margin="0,0,0,10">
+            <TextBlock Text="Редактор конфигурации тегов" FontSize="18" FontWeight="Bold"/>
+            
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button Content="➕ Добавить тег" Command="{Binding AddTagCommand}" Padding="10,5"/>
+                <Button Content="🗑️ Удалить выбранное" Command="{Binding RemoveTagCommand}" Padding="10,5"/>
+                <Separator Width="1" Height="24" Background="Gray"/>
+                <TextBlock Text="Фильтр по типу:" VerticalAlignment="Center" Margin="5,0"/>
+                <ComboBox SelectedItem="{Binding SelectedFilterType}" 
+                          MinWidth="150">
+                    <ComboBoxItem Content="Все типы" Tag="All"/>
+                    <ComboBoxItem Content="Coils (катушки)" Tag="Coils"/>
+                    <ComboBoxItem Content="Holding Registers" Tag="Holding"/>
+                    <ComboBoxItem Content="Input Registers" Tag="Input"/>
+                </ComboBox>
+                <TextBox Text="{Binding SearchText}" 
+                         Watermark="🔍 Поиск по имени или адресу..."
+                         MinWidth="250"/>
+                <TextBlock Text="{Binding TagsCountInfo}" 
+                           VerticalAlignment="Center"
+                           FontSize="12"
+                           Foreground="Gray"
+                           Margin="10,0"/>
+            </StackPanel>
+        </StackPanel>
+        
+        <!-- Таблица тегов -->
+        <DataGrid Grid.Row="1" 
+                  x:Name="TagsDataGrid"
+                  ItemsSource="{Binding FilteredTags}"
+                  SelectedItem="{Binding SelectedTag}"
+                  AutoGenerateColumns="False"
+                  CanUserReorderColumns="True"
+                  CanUserResizeColumns="True"
+                  GridLinesVisibility="All"
+                  BorderThickness="1"
+                  BorderBrush="Gray"
+                  IsReadOnly="False">
+            <DataGrid.Columns>
+                <DataGridCheckBoxColumn Header="Вкл." 
+                                        Binding="{Binding Enabled}" 
+                                        Width="50"/>
+                <DataGridTextColumn Header="Имя тега" 
+                                    Binding="{Binding Name}" 
+                                    Width="200"
+                                    IsReadOnly="False"/>
+                <DataGridTextColumn Header="Адрес" 
+                                    Binding="{Binding Address}" 
+                                    Width="100"
+                                    IsReadOnly="False"/>
+                <DataGridTemplateColumn Header="Тип регистра" Width="150">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Register}" VerticalAlignment="Center" Margin="5,0"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                    <DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                            <ComboBox ItemsSource="{Binding $parent[Window].DataContext.RegisterTypes}"
+                                      SelectedItem="{Binding Register, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellEditingTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Тип данных" Width="120">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Type}" VerticalAlignment="Center" Margin="5,0"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                    <DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                            <ComboBox ItemsSource="{Binding $parent[Window].DataContext.DataTypes}"
+                                      SelectedItem="{Binding Type, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellEditingTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Масштаб" 
+                                    Binding="{Binding Scale}" 
+                                    Width="80"
+                                    IsReadOnly="False"/>
+                <DataGridTextColumn Header="Смещение" 
+                                    Binding="{Binding Offset}" 
+                                    Width="80"
+                                    IsReadOnly="False"/>
+                <DataGridTemplateColumn Header="Порядок слов" Width="120">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding WordOrder}" VerticalAlignment="Center" Margin="5,0"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                    <DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                            <ComboBox ItemsSource="{Binding $parent[Window].DataContext.WordOrders}"
+                                      SelectedItem="{Binding WordOrder, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellEditingTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+        
+        <!-- Нижняя панель с кнопками -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,15,0,0">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="💾 Файл:" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding TagsFilePath}" 
+                           VerticalAlignment="Center"
+                           FontSize="11"
+                           Foreground="DarkBlue"/>
+            </StackPanel>
+            
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                <Button Content="💾 Сохранить" 
+                        Command="{Binding SaveCommand}" 
+                        Padding="20,8"
+                        IsDefault="True"/>
+                <Button Content="❌ Отмена" 
+                        Click="CancelButton_Click" 
+                        Padding="20,8"
+                        IsCancel="True"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

@@ -18,11 +18,13 @@ public class MainWindowViewModel : ViewModelBase
 {
     private readonly IModbusClientService _modbusService;
     private readonly ISettingsService _settingsService;
+    private readonly ITagsConfigService _tagsConfigService;
     private string _connectionStatus = "Отключен";
     private bool _isConnected;
     private ushort _registerValue;
     private ushort _registerAddress = 0;
     private ModbusConnectionConfig _connectionConfig = new();
+    private TagsConfiguration _tagsConfiguration = new();
     private IDisposable? _pollingSubscription;
     private bool _isPolling;
     private int _pollingIntervalMs = 1000;
@@ -73,11 +75,13 @@ public class MainWindowViewModel : ViewModelBase
 
     public MainWindowViewModel()
     {
-    _modbusService = new ModbusClientService();
-    _settingsService = new SettingsService();
+        _modbusService = new ModbusClientService();
+        _settingsService = new SettingsService();
+        _tagsConfigService = new TagsConfigService();
 
-    // Load settings asynchronously on startup
-    _ = LoadSettingsAsync();
+        // Load settings and tags configuration asynchronously on startup
+        _ = LoadSettingsAsync();
+        _ = LoadTagsConfigurationAsync();
 
         ConnectCommand = ReactiveCommand.CreateFromTask(ConnectAsync);
         DisconnectCommand = ReactiveCommand.CreateFromTask(DisconnectAsync);
@@ -169,6 +173,15 @@ public class MainWindowViewModel : ViewModelBase
             // Persist whenever settings are updated from UI
             _ = SaveSettingsAsync();
         }
+    }
+
+    /// <summary>
+    /// Конфигурация тегов (загружается из tags.json)
+    /// </summary>
+    public TagsConfiguration TagsConfiguration
+    {
+        get => _tagsConfiguration;
+        set => this.RaiseAndSetIfChanged(ref _tagsConfiguration, value);
     }
 
     public bool IsPolling
@@ -759,6 +772,28 @@ public class MainWindowViewModel : ViewModelBase
             Scale = 0.1,
             Offset = 0
         });
+    }
+
+    /// <summary>
+    /// Загрузить конфигурацию тегов из tags.json
+    /// </summary>
+    private async Task LoadTagsConfigurationAsync()
+    {
+        var config = await _tagsConfigService.LoadTagsConfigurationAsync();
+        if (config != null)
+        {
+            _tagsConfiguration = config;
+            
+            // Если в ConnectionConfig нет тегов, заполняем из tags.json
+            if (ConnectionConfig.Tags.Count == 0 && _tagsConfiguration.Tags.Count > 0)
+            {
+                foreach (var tag in _tagsConfiguration.Tags)
+                {
+                    ConnectionConfig.Tags.Add(tag);
+                }
+                System.Diagnostics.Debug.WriteLine($"Loaded {_tagsConfiguration.Tags.Count} tags from tags.json");
+            }
+        }
     }
 
     private Task SaveSettingsAsync()

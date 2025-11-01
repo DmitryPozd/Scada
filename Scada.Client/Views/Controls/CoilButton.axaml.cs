@@ -146,8 +146,8 @@ public partial class CoilButton : UserControl
         var dialog = new Window
         {
             Title = "Настройки кнопки",
-            Width = 450,
-            Height = 380,
+            Width = 500,
+            Height = 550,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };
@@ -258,38 +258,94 @@ public partial class CoilButton : UserControl
 
     private void ShowTagSelectionInDialog(StackPanel stack, Window dialog, TextBox labelInput)
     {
-        var label = new TextBlock 
+        var infoText = new TextBlock 
         { 
-            Text = $"Кнопка: {Label}\nТекущий адрес: {CoilAddress}\nВыберите тег Coil:",
-            TextWrapping = TextWrapping.Wrap
+            Text = $"Кнопка: {Label}\nТекущий адрес: {CoilAddress}",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 8)
         };
+        stack.Children.Add(infoText);
 
         // Фильтруем только Coil теги
         var coilTags = new ObservableCollection<TagDefinition>(
             AvailableTags!.Where(t => t.Register == RegisterType.Coils)
         );
 
+        // Добавляем поле поиска
+        var searchLabel = new TextBlock 
+        { 
+            Text = "Поиск тега:",
+            FontWeight = FontWeight.SemiBold,
+            Margin = new Thickness(0, 5, 0, 3)
+        };
+        stack.Children.Add(searchLabel);
+
+        var searchBox = new TextBox 
+        { 
+            Watermark = "Введите имя или адрес тега...",
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        stack.Children.Add(searchBox);
+
+        var tagLabel = new TextBlock 
+        { 
+            Text = $"Доступно тегов: {coilTags.Count}",
+            FontSize = 11,
+            Foreground = Brushes.Gray,
+            Margin = new Thickness(0, 0, 0, 3)
+        };
+        stack.Children.Add(tagLabel);
+
         var combo = new ComboBox
         {
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+            MaxDropDownHeight = 300
         };
 
-        // Добавляем элементы с отображаемым текстом
-        foreach (var tag in coilTags)
+        var filteredTags = new ObservableCollection<TagDefinition>(coilTags);
+
+        // Функция для обновления списка тегов
+        void UpdateComboBox(string searchText)
         {
-            combo.Items.Add(new ComboBoxItem 
-            { 
-                Content = $"{tag.Name} (адрес: {tag.Address})",
-                Tag = tag
-            });
+            combo.Items.Clear();
+            filteredTags.Clear();
+
+            var filtered = string.IsNullOrWhiteSpace(searchText)
+                ? coilTags
+                : new ObservableCollection<TagDefinition>(coilTags.Where(t =>
+                    t.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    t.Address.ToString().Contains(searchText)));
+
+            foreach (var tag in filtered)
+            {
+                filteredTags.Add(tag);
+                combo.Items.Add(new ComboBoxItem 
+                { 
+                    Content = $"{tag.Name} (адрес: {tag.Address})",
+                    Tag = tag
+                });
+            }
+
+            tagLabel.Text = $"Найдено тегов: {filtered.Count} из {coilTags.Count}";
+            
+            // Если текущий адрес совпадает с тегом, выделяем его
+            combo.SelectedIndex = filtered.ToList().FindIndex(t => t.Address == CoilAddress);
         }
-        combo.SelectedIndex = coilTags.ToList().FindIndex(t => t.Address == CoilAddress);
+
+        // Инициализация списка
+        UpdateComboBox(string.Empty);
+
+        // Подписка на изменение текста поиска
+        searchBox.TextChanged += (s, e) => UpdateComboBox(searchBox.Text ?? string.Empty);
+
+        stack.Children.Add(combo);
 
         var buttons = new StackPanel 
         { 
             Orientation = Avalonia.Layout.Orientation.Horizontal, 
             Spacing = 10, 
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right 
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+            Margin = new Thickness(0, 10, 0, 0)
         };
         
         var okButton = new Button { Content = "OK", Width = 80 };
@@ -313,8 +369,6 @@ public partial class CoilButton : UserControl
         buttons.Children.Add(okButton);
         buttons.Children.Add(cancelButton);
         
-        stack.Children.Add(label);
-        stack.Children.Add(combo);
         stack.Children.Add(buttons);
     }
 

@@ -5,6 +5,7 @@ namespace Scada.Client.ViewModels;
 
 /// <summary>
 /// ViewModel for Settings window.
+/// Теги редактируются через отдельное окно TagsEditorWindow.
 /// </summary>
 public class SettingsWindowViewModel : ViewModelBase
 {
@@ -56,9 +57,4 @@ public class SettingsWindowViewModel : ViewModelBase
             this.RaisePropertyChanged();
         }
     }
-
-    // For DataGrid ComboBoxes
-    public Scada.Client.Models.RegisterType[] RegisterTypes => System.Enum.GetValues<Scada.Client.Models.RegisterType>();
-    public Scada.Client.Models.DataType[] DataTypes => System.Enum.GetValues<Scada.Client.Models.DataType>();
-    public Scada.Client.Models.WordOrder[] WordOrders => System.Enum.GetValues<Scada.Client.Models.WordOrder>();
 }
