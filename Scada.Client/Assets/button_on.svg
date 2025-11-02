@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50">
+  <!-- Зеленый квадрат (фон) -->
+  <rect x="5" y="5" width="40" height="40" fill="#16A34A" stroke="#15803D" stroke-width="2" rx="4"/>
+  <!-- Белый треугольник внутри (PLAY символ) -->
+  <polygon points="19,16 19,34 36,25" fill="#FFFFFF"/>
+</svg>

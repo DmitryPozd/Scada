@@ -2,19 +2,27 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:Scada.Client.Views.Controls"
              x:Class="Scada.Client.Views.Controls.CoilButton"
-             Width="120" Height="120">
-  <Border x:Name="Root" 
-          CornerRadius="8" 
-          Padding="10" 
-          Background="{DynamicResource ControlFillColorDefaultBrush}" 
-          BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
+             Width="90" Height="100">
+  
+  <!-- Кликабельная кнопка -->
+  <Button x:Name="MainButton"
+          Click="OnToggleClick"
+          Padding="8"
+          CornerRadius="8"
+          Background="{DynamicResource ControlFillColorDefaultBrush}"
+          BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
           BorderThickness="1">
-    <StackPanel Spacing="8" HorizontalAlignment="Center">
+    <StackPanel Spacing="6" HorizontalAlignment="Center">
+      <!-- Название -->
       <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:CoilButton}}"
-                 FontWeight="SemiBold" HorizontalAlignment="Center" FontSize="12"/>
+                 FontWeight="SemiBold" 
+                 HorizontalAlignment="Center" 
+                 FontSize="11"
+                 TextWrapping="Wrap"
+                 TextAlignment="Center"/>
       
       <!-- Визуальный индикатор состояния -->
-      <Border Width="60" Height="40" CornerRadius="6" BorderThickness="2">
+      <Border Width="50" Height="35" CornerRadius="6" BorderThickness="2">
         <Border.BorderBrush>
           <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
             <Binding.Converter>
@@ -30,8 +38,71 @@
           </Binding>
         </Border.Background>
         <Grid>
-          <!-- Иконка состояния -->
-          <TextBlock FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold">
+          <!-- Иконка ON (когда активна и есть IconPathOn) -->
+          <Image Name="IconOn" Stretch="Uniform">
+            <Image.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" />
+                <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNotNull}" />
+              </MultiBinding>
+            </Image.IsVisible>
+            <Image.Source>
+              <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
+                <Binding.Converter>
+                  <controls:PathToImageConverter/>
+                </Binding.Converter>
+              </Binding>
+            </Image.Source>
+          </Image>
+          
+          <!-- Иконка OFF (когда не активна и есть IconPathOff) -->
+          <Image Name="IconOff" Stretch="Uniform">
+            <Image.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static BoolConverters.Not}" />
+                <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNotNull}" />
+              </MultiBinding>
+            </Image.IsVisible>
+            <Image.Source>
+              <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
+                <Binding.Converter>
+                  <controls:PathToImageConverter/>
+                </Binding.Converter>
+              </Binding>
+            </Image.Source>
+          </Image>
+          
+          <!-- Старая иконка (для обратной совместимости, если используется IconPath) -->
+          <Image Name="IconLegacy" Stretch="Uniform">
+            <Image.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="IconPath" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNull}" />
+                <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNull}" />
+              </MultiBinding>
+            </Image.IsVisible>
+            <Image.Source>
+              <Binding Path="IconPath" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
+                <Binding.Converter>
+                  <controls:PathToImageConverter/>
+                </Binding.Converter>
+              </Binding>
+            </Image.Source>
+          </Image>
+          
+          <!-- Текстовая иконка состояния (если нет изображений) -->
+          <TextBlock Name="DefaultIcon">
+            <TextBlock.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="IconPath" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNull}" />
+                <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNull}" />
+                <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNull}" />
+              </MultiBinding>
+            </TextBlock.IsVisible>
+            <TextBlock.FontSize>18</TextBlock.FontSize>
+            <TextBlock.HorizontalAlignment>Center</TextBlock.HorizontalAlignment>
+            <TextBlock.VerticalAlignment>Center</TextBlock.VerticalAlignment>
+            <TextBlock.FontWeight>Bold</TextBlock.FontWeight>
             <TextBlock.Text>
               <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
                 <Binding.Converter>
@@ -49,16 +120,18 @@
           </TextBlock>
         </Grid>
       </Border>
-
-      <!-- Кнопки управления -->
-      <Grid ColumnDefinitions="*,*" ColumnSpacing="5">
-        <Button Grid.Column="0" Content="ON" FontSize="10" Padding="8,4"
-                Command="{Binding OnCommand, RelativeSource={RelativeSource AncestorType=controls:CoilButton}}"
-                Classes="accent" FontWeight="SemiBold"/>
-        <Button Grid.Column="1" Content="OFF" FontSize="10" Padding="8,4"
-                Command="{Binding OffCommand, RelativeSource={RelativeSource AncestorType=controls:CoilButton}}"
-                Background="#EF4444" Foreground="White" FontWeight="SemiBold"/>
-      </Grid>
+      
+      <!-- Текстовый индикатор -->
+      <TextBlock FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center">
+        <TextBlock.Text>
+          <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
+            <Binding.Converter>
+              <controls:CoilStateTextConverter/>
+            </Binding.Converter>
+          </Binding>
+        </TextBlock.Text>
+      </TextBlock>
     </StackPanel>
-  </Border>
+  </Button>
+  
 </UserControl>

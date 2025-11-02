@@ -337,32 +337,22 @@ public partial class MainWindow : Window
         var settingsVm = new SettingsWindowViewModel();
         if (DataContext is MainWindowViewModel mainVm)
         {
-            settingsVm.ConnectionConfig = new ModbusConnectionConfig
-            {
-                Host = mainVm.ConnectionConfig.Host,
-                Port = mainVm.ConnectionConfig.Port,
-                UnitId = mainVm.ConnectionConfig.UnitId,
-                Tags = new ObservableCollection<TagDefinition>(
-                    mainVm.ConnectionConfig.Tags.Select(t => new TagDefinition
-                    {
-                        Enabled = t.Enabled,
-                        Name = t.Name,
-                        Address = t.Address,
-                        Register = t.Register,
-                        Type = t.Type,
-                        WordOrder = t.WordOrder,
-                        Scale = t.Scale,
-                        Offset = t.Offset
-                    }))
-            };
+            settingsVm.Host = mainVm.ConnectionConfig.Host;
+            settingsVm.Port = mainVm.ConnectionConfig.Port;
+            settingsVm.UnitId = mainVm.ConnectionConfig.UnitId;
+            settingsVm.PollingIntervalMs = mainVm.ConnectionConfig.PollingIntervalMs;
         }
+
         var settingsWindow = new SettingsWindow { DataContext = settingsVm };
         var result = await settingsWindow.ShowDialog<bool>(this);
+        
         if (result && DataContext is MainWindowViewModel vm)
         {
-            vm.ConnectionConfig = settingsVm.ConnectionConfig;
-            // Обновляем AvailableTags у всех кнопок на мнемосхеме
-            UpdateButtonAvailableTags(vm);
+            vm.ConnectionConfig.Host = settingsVm.Host;
+            vm.ConnectionConfig.Port = settingsVm.Port;
+            vm.ConnectionConfig.UnitId = settingsVm.UnitId;
+            vm.ConnectionConfig.PollingIntervalMs = settingsVm.PollingIntervalMs;
+            await vm.SaveSettingsAsync();
         }
     }
 

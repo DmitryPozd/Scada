@@ -4,11 +4,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="using:Scada.Client.ViewModels"
     xmlns:controls="using:Scada.Client.Views.Controls"
-        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+        mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="1080"
         x:Class="Scada.Client.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="SCADA - Мнемосхема"
-        Width="900" Height="600">
+        Width="1920" Height="1080">
     
     <Grid RowDefinitions="Auto,*,Auto" Margin="10">
         <!-- Connection Status Bar -->

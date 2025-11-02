@@ -114,6 +114,21 @@ public partial class ImageButton : UserControl
         });
     }
 
+    private void OnToggleClick(object? sender, RoutedEventArgs e)
+    {
+        // Toggle состояние и выполнить соответствующую команду
+        if (IsActive)
+        {
+            // Текущее состояние ON, переключаем в OFF
+            OffCommand?.Execute(null);
+        }
+        else
+        {
+            // Текущее состояние OFF, переключаем в ON
+            OnCommand?.Execute(null);
+        }
+    }
+
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
@@ -638,6 +653,14 @@ public class ActiveStateTextConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         => value is bool b && b ? "ВКЛЮЧЕНО" : "ВЫКЛЮЧЕНО";
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}
+
+public class ImageButtonStateTextConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is bool b && b ? "ВЫКЛ" : "ВКЛ";
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
 }

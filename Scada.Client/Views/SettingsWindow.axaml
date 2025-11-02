@@ -3,84 +3,93 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:Scada.Client.ViewModels"
-        mc:Ignorable="d" d:DesignWidth="1300" d:DesignHeight="1000"
-    x:Class="Scada.Client.Views.SettingsWindow"
-    x:CompileBindings="False"
-        Title="Настройки подключения Modbus"
-        Width="1300" Height="1000"
-        WindowStartupLocation="CenterOwner">
-    
-    <Grid RowDefinitions="*,Auto" Margin="20">
-        <StackPanel Grid.Row="0" Spacing="15">
-            <TextBlock Text="Настройки Modbus TCP" FontSize="18" FontWeight="Bold"/>
+        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="400"
+        x:Class="Scada.Client.Views.SettingsWindow"
+        x:DataType="vm:SettingsWindowViewModel"
+        Title="Настройки подключения"
+        Width="500" Height="400"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <Design.DataContext>
+        <vm:SettingsWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Заголовок -->
+        <TextBlock Grid.Row="0" 
+                   Text="Параметры подключения Modbus TCP" 
+                   FontSize="18" 
+                   FontWeight="Bold"
+                   Margin="0,0,0,20"/>
+
+        <!-- Форма настроек -->
+        <StackPanel Grid.Row="1" Spacing="15">
             
-            <StackPanel Spacing="10">
-                <TextBlock Text="IP-адрес контроллера:" FontWeight="SemiBold"/>
-                <TextBox Text="{Binding Host}" Watermark="127.0.0.1"/>
+            <!-- IP адрес -->
+            <StackPanel>
+                <TextBlock Text="IP адрес контроллера:" FontWeight="SemiBold"/>
+                <TextBox Text="{Binding Host}" 
+                         Watermark="192.168.1.111"
+                         Margin="0,5,0,0"/>
             </StackPanel>
-            
-            <StackPanel Spacing="10">
+
+            <!-- Порт -->
+            <StackPanel>
                 <TextBlock Text="Порт:" FontWeight="SemiBold"/>
-                <NumericUpDown Value="{Binding Port}" Minimum="1" Maximum="65535" Increment="1"/>
+                <NumericUpDown Value="{Binding Port}" 
+                               Minimum="1" 
+                               Maximum="65535"
+                               ShowButtonSpinner="True"
+                               Margin="0,5,0,0"/>
             </StackPanel>
-            
-            <StackPanel Spacing="10">
+
+            <!-- Unit ID -->
+            <StackPanel>
                 <TextBlock Text="Unit ID:" FontWeight="SemiBold"/>
-                <NumericUpDown Value="{Binding UnitId}" Minimum="0" Maximum="255" Increment="1"/>
+                <NumericUpDown Value="{Binding UnitId}" 
+                               Minimum="0" 
+                               Maximum="255"
+                               ShowButtonSpinner="True"
+                               Margin="0,5,0,0"/>
             </StackPanel>
 
-            <StackPanel Spacing="10">
-                <TextBlock Text="Интервал опроса, мс:" FontWeight="SemiBold"/>
-                <NumericUpDown Value="{Binding PollingIntervalMs}" Minimum="100" Maximum="60000" Increment="100"/>
+            <!-- Интервал опроса -->
+            <StackPanel>
+                <TextBlock Text="Интервал опроса (мс):" FontWeight="SemiBold"/>
+                <NumericUpDown Value="{Binding PollingIntervalMs}" 
+                               Minimum="100" 
+                               Maximum="10000"
+                               Increment="100"
+                               ShowButtonSpinner="True"
+                               Margin="0,5,0,0"/>
             </StackPanel>
 
-            <StackPanel Spacing="8" Margin="0,10,0,0">
-                <TextBlock Text="Карта тегов (Holding Registers)" FontWeight="SemiBold"/>
-                <DataGrid x:Name="TagsGrid" ItemsSource="{Binding ConnectionConfig.Tags}"
-                          AutoGenerateColumns="False" CanUserResizeColumns="True" HeadersVisibility="All"
-                          GridLinesVisibility="All" Height="260">
-                    <DataGrid.Columns>
-                        <DataGridTemplateColumn Header="Рег." Width="100">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <ComboBox ItemsSource="{Binding DataContext.RegisterTypes, RelativeSource={RelativeSource AncestorType=Window}}"
-                                              SelectedItem="{Binding Register, Mode=TwoWay}"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Тип" Width="140">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <ComboBox ItemsSource="{Binding DataContext.DataTypes, RelativeSource={RelativeSource AncestorType=Window}}"
-                                              SelectedItem="{Binding Type, Mode=TwoWay}"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                        <DataGridCheckBoxColumn Header="Вкл" Binding="{Binding Enabled, Mode=TwoWay}" Width="60"/>
-                        <DataGridTextColumn Header="Имя" Binding="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
-                        <DataGridTextColumn Header="Адрес" Binding="{Binding Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="100"/>
-                        <DataGridTextColumn Header="Scale" Binding="{Binding Scale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="100"/>
-                        <DataGridTextColumn Header="Offset" Binding="{Binding Offset, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="100"/>
-                        <DataGridTemplateColumn Header="Word Order" Width="140">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <ComboBox ItemsSource="{Binding DataContext.WordOrders, RelativeSource={RelativeSource AncestorType=Window}}"
-                                              SelectedItem="{Binding WordOrder, Mode=TwoWay}"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                    <Button Content="Добавить" Click="AddTag_Click"/>
-                    <Button Content="Удалить выбранный" Click="RemoveSelectedTag_Click"/>
-                </StackPanel>
-            </StackPanel>
         </StackPanel>
-        
-        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,15,0,0">
-            <Button Content="Сохранить" Click="SaveButton_Click" Padding="20,8"/>
-            <Button Content="Отмена" Click="CancelButton_Click" Padding="20,8"/>
+
+        <!-- Кнопки -->
+        <StackPanel Grid.Row="3" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right" 
+                    Spacing="10"
+                    Margin="0,20,0,0">
+            <Button Content="OK" 
+                    Click="OnOkClick"
+                    Width="100" 
+                    Padding="10,5"
+                    Classes="accent"/>
+            <Button Content="Отмена" 
+                    Click="OnCancelClick"
+                    Width="100" 
+                    Padding="10,5"/>
         </StackPanel>
+
     </Grid>
 </Window>

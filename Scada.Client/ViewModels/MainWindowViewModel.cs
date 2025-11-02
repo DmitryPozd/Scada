@@ -532,23 +532,12 @@ public class MainWindowViewModel : ViewModelBase
 
     private async Task PollGroupCoilsAsync(System.Collections.ObjectModel.ObservableCollection<TagDefinition> tags)
     {
-        // Отладка: показываем ВСЕ теги
-        var allTags = tags.ToList();
-        var coilTags = tags.Where(t => t.Register == RegisterType.Coils).ToList();
-        var enabledCoilTags = tags.Where(t => t.Enabled && t.Register == RegisterType.Coils).ToList();
-        
-        ConnectionStatus = $"Всего тегов: {allTags.Count}, Coils: {coilTags.Count}, Enabled Coils: {enabledCoilTags.Count}";
-        
         var group = tags.Where(t => t.Enabled && t.Register == RegisterType.Coils).OrderBy(t => t.Address).ToList();
         
         if (group.Count == 0)
         {
-            ConnectionStatus = $"⚠ НЕТ включённых Coil тегов! Всего тегов: {allTags.Count}, Coils тегов: {coilTags.Count}. Откройте Настройки → включите галочки у Coil тегов";
             return;
         }
-        
-        ConnectionStatus = $"Найдено {group.Count} включённых Coil тегов (адреса: {string.Join(",", group.Select(t => t.Address))})";
-
 
         try
         {
@@ -596,20 +585,11 @@ public class MainWindowViewModel : ViewModelBase
             if (CoilTagsUpdated != null)
             {
                 CoilTagsUpdated.Invoke(this, coilValues);
-                ConnectionStatus = $"✓ Опрос: обновлено {coilValues.Count} из {group.Count} coils";
-            }
-            else
-            {
-                ConnectionStatus = $"Опрос: {coilValues.Count} coils (подписчиков НЕТ!)";
             }
         }
         catch (Exception ex)
         {
             // Ошибка чтения Coils не должна ломать весь опрос
-            var errorMsg = ex.Message.Contains("allowable address")
-                ? $"Недоступные адреса Coils ({group.Min(t => t.Address)}-{group.Max(t => t.Address)}). Проверьте настройки тегов."
-                : ex.Message;
-            ConnectionStatus = $"⚠ Ошибка опроса Coils: {errorMsg}";
             System.Diagnostics.Debug.WriteLine($"PollGroupCoilsAsync failed: {ex}");
         }
     }
@@ -703,7 +683,7 @@ public class MainWindowViewModel : ViewModelBase
         });
     }
 
-    private Task SaveSettingsAsync()
+    public Task SaveSettingsAsync()
     {
         return _settingsService.SaveAsync(ConnectionConfig);
     }
@@ -719,14 +699,13 @@ public class MainWindowViewModel : ViewModelBase
             SelectedTag.Value = value ? 1.0 : 0.0;
             if (SelectedTag.Name == "Pump1Running") Pump1Running = value;
             if (SelectedTag.Name == "Pump1Alarm") Pump1Alarm = value;
-            ConnectionStatus = $"Coil {RegisterAddress} записан: {(value ? "ON" : "OFF")}";
         }
         catch (Exception ex)
         {
             var errorMsg = ex.Message.Contains("allowable address") 
                 ? $"Адрес {RegisterAddress} недоступен на сервере." 
                 : ex.Message;
-            ConnectionStatus = $"⚠ Ошибка записи Coil {RegisterAddress}: {errorMsg}";
+            ConnectionStatus = $"⚠ Ошибка записи: {errorMsg}";
         }
     }
 
@@ -745,7 +724,6 @@ public class MainWindowViewModel : ViewModelBase
         {
             bool value = await _modbusService.ReadCoilAsync(ReadCoilAddress);
             ReadCoilValue = value;
-            ConnectionStatus = $"Coil {ReadCoilAddress} прочитан: {(value ? "ON" : "OFF")}";
         }
         catch (Exception ex)
         {
@@ -766,7 +744,6 @@ public class MainWindowViewModel : ViewModelBase
             ushort address = getAddress();
             await _modbusService.WriteCoilAsync(address, value);
             updateState(value);
-            ConnectionStatus = $"Coil {address} записан: {(value ? "ON" : "OFF")}";
         }
         catch (Exception ex)
         {
@@ -790,14 +767,13 @@ public class MainWindowViewModel : ViewModelBase
         try
         {
             await _modbusService.WriteCoilAsync(address, value);
-            ConnectionStatus = $"Coil {address} записан: {(value ? "ON" : "OFF")}";
         }
         catch (Exception ex)
         {
             var errorMsg = ex.Message.Contains("allowable address") 
-                ? $"Адрес {address} недоступен на сервере. Проверьте диапазон доступных Coil адресов." 
+                ? $"Адрес {address} недоступен на сервере." 
                 : ex.Message;
-            ConnectionStatus = $"⚠ Ошибка записи Coil {address}: {errorMsg}";
+            ConnectionStatus = $"⚠ Ошибка записи: {errorMsg}";
             
             // Логируем для отладки
             System.Diagnostics.Debug.WriteLine($"WriteCoilAsync failed: address={address}, value={value}, error={ex.Message}");

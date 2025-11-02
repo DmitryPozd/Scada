@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50">
+  <!-- Красный квадрат (фон) -->
+  <rect x="5" y="5" width="40" height="40" fill="#DC2626" stroke="#B91C1C" stroke-width="2" rx="4"/>
+  <!-- Белый квадрат внутри (STOP символ) -->
+  <rect x="17" y="17" width="16" height="16" fill="#FFFFFF"/>
+</svg>
