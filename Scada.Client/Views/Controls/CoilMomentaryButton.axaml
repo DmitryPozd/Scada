@@ -1,10 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:Scada.Client.Views.Controls"
-             x:Class="Scada.Client.Views.Controls.CoilButton"
+             x:Class="Scada.Client.Views.Controls.CoilMomentaryButton"
              Width="90" Height="100">
   
-  <!-- Кликабельная кнопка (заменили Button на Border для правильной работы перетаскивания) -->
+  <!-- Кнопка без фиксации (нажал-включил, отпустил-выключил) -->
   <Border x:Name="MainButton"
           Padding="8"
           CornerRadius="8"
@@ -14,7 +14,7 @@
           Cursor="Hand">
     <StackPanel Spacing="6" HorizontalAlignment="Center">
       <!-- Название -->
-      <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:CoilButton}}"
+      <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:CoilMomentaryButton}}"
                  FontWeight="SemiBold" 
                  HorizontalAlignment="Center" 
                  FontSize="11"
@@ -24,14 +24,14 @@
       <!-- Визуальный индикатор состояния -->
       <Border Width="50" Height="35" CornerRadius="6" BorderThickness="2">
         <Border.BorderBrush>
-          <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
+          <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilMomentaryButton}">
             <Binding.Converter>
               <controls:CoilStateBorderConverter/>
             </Binding.Converter>
           </Binding>
         </Border.BorderBrush>
         <Border.Background>
-          <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
+          <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilMomentaryButton}">
             <Binding.Converter>
               <controls:CoilStateBackgroundConverter/>
             </Binding.Converter>
@@ -42,12 +42,12 @@
           <Image Name="IconOn" Stretch="Uniform">
             <Image.IsVisible>
               <MultiBinding Converter="{x:Static BoolConverters.And}">
-                <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" />
-                <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilMomentaryButton}" />
+                <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:CoilMomentaryButton}" Converter="{x:Static ObjectConverters.IsNotNull}" />
               </MultiBinding>
             </Image.IsVisible>
             <Image.Source>
-              <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
+              <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:CoilMomentaryButton}">
                 <Binding.Converter>
                   <controls:PathToImageConverter/>
                 </Binding.Converter>
@@ -59,30 +59,12 @@
           <Image Name="IconOff" Stretch="Uniform">
             <Image.IsVisible>
               <MultiBinding Converter="{x:Static BoolConverters.And}">
-                <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static BoolConverters.Not}" />
-                <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilMomentaryButton}" Converter="{x:Static BoolConverters.Not}" />
+                <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:CoilMomentaryButton}" Converter="{x:Static ObjectConverters.IsNotNull}" />
               </MultiBinding>
             </Image.IsVisible>
             <Image.Source>
-              <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
-                <Binding.Converter>
-                  <controls:PathToImageConverter/>
-                </Binding.Converter>
-              </Binding>
-            </Image.Source>
-          </Image>
-          
-          <!-- Старая иконка (для обратной совместимости, если используется IconPath) -->
-          <Image Name="IconLegacy" Stretch="Uniform">
-            <Image.IsVisible>
-              <MultiBinding Converter="{x:Static BoolConverters.And}">
-                <Binding Path="IconPath" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNotNull}" />
-                <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNull}" />
-                <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNull}" />
-              </MultiBinding>
-            </Image.IsVisible>
-            <Image.Source>
-              <Binding Path="IconPath" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
+              <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:CoilMomentaryButton}">
                 <Binding.Converter>
                   <controls:PathToImageConverter/>
                 </Binding.Converter>
@@ -94,9 +76,8 @@
           <TextBlock Name="DefaultIcon">
             <TextBlock.IsVisible>
               <MultiBinding Converter="{x:Static BoolConverters.And}">
-                <Binding Path="IconPath" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNull}" />
-                <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNull}" />
-                <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}" Converter="{x:Static ObjectConverters.IsNull}" />
+                <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:CoilMomentaryButton}" Converter="{x:Static ObjectConverters.IsNull}" />
+                <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:CoilMomentaryButton}" Converter="{x:Static ObjectConverters.IsNull}" />
               </MultiBinding>
             </TextBlock.IsVisible>
             <TextBlock.FontSize>18</TextBlock.FontSize>
@@ -104,14 +85,14 @@
             <TextBlock.VerticalAlignment>Center</TextBlock.VerticalAlignment>
             <TextBlock.FontWeight>Bold</TextBlock.FontWeight>
             <TextBlock.Text>
-              <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
+              <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilMomentaryButton}">
                 <Binding.Converter>
                   <controls:CoilStateIconConverter/>
                 </Binding.Converter>
               </Binding>
             </TextBlock.Text>
             <TextBlock.Foreground>
-              <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
+              <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilMomentaryButton}">
                 <Binding.Converter>
                   <controls:CoilStateTextColorConverter/>
                 </Binding.Converter>
@@ -124,9 +105,9 @@
       <!-- Текстовый индикатор -->
       <TextBlock FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center">
         <TextBlock.Text>
-          <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
+          <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilMomentaryButton}">
             <Binding.Converter>
-              <controls:CoilStateTextConverter/>
+              <controls:MomentaryStateTextConverter/>
             </Binding.Converter>
           </Binding>
         </TextBlock.Text>

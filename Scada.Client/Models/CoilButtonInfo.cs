@@ -9,6 +9,7 @@ public class CoilButtonInfo
     public ushort CoilAddress { get; set; }
     public string? TagName { get; set; }
     public bool IsImageButton { get; set; }
+    public bool IsMomentary { get; set; } // true = кнопка без фиксации (нажал-включил, отпустил-выключил)
     public string? ImageType { get; set; } // "Motor", "Valve", "Fan", etc.
     public double X { get; set; }
     public double Y { get; set; }

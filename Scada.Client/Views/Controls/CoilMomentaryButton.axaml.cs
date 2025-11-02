@@ -16,37 +16,37 @@ using Scada.Client.Services;
 
 namespace Scada.Client.Views.Controls;
 
-public partial class CoilButton : UserControl
+public partial class CoilMomentaryButton : UserControl
 {
+    private Point _pressPoint;
+    private bool _wasPressed;
+
     public static readonly StyledProperty<bool> IsActiveProperty =
-        AvaloniaProperty.Register<CoilButton, bool>(nameof(IsActive));
+        AvaloniaProperty.Register<CoilMomentaryButton, bool>(nameof(IsActive));
 
     public static readonly StyledProperty<string> LabelProperty =
-        AvaloniaProperty.Register<CoilButton, string>(nameof(Label), defaultValue: "Coil");
+        AvaloniaProperty.Register<CoilMomentaryButton, string>(nameof(Label), defaultValue: "Кнопка");
 
     public static readonly StyledProperty<ushort> CoilAddressProperty =
-        AvaloniaProperty.Register<CoilButton, ushort>(nameof(CoilAddress), defaultValue: (ushort)0);
+        AvaloniaProperty.Register<CoilMomentaryButton, ushort>(nameof(CoilAddress), defaultValue: (ushort)0);
 
     public static readonly StyledProperty<ObservableCollection<TagDefinition>?> AvailableTagsProperty =
-        AvaloniaProperty.Register<CoilButton, ObservableCollection<TagDefinition>?>(nameof(AvailableTags));
+        AvaloniaProperty.Register<CoilMomentaryButton, ObservableCollection<TagDefinition>?>(nameof(AvailableTags));
 
     public static readonly StyledProperty<TagDefinition?> SelectedTagProperty =
-        AvaloniaProperty.Register<CoilButton, TagDefinition?>(nameof(SelectedTag));
+        AvaloniaProperty.Register<CoilMomentaryButton, TagDefinition?>(nameof(SelectedTag));
 
     public static readonly StyledProperty<ICommand?> OnCommandProperty =
-        AvaloniaProperty.Register<CoilButton, ICommand?>(nameof(OnCommand));
+        AvaloniaProperty.Register<CoilMomentaryButton, ICommand?>(nameof(OnCommand));
 
     public static readonly StyledProperty<ICommand?> OffCommandProperty =
-        AvaloniaProperty.Register<CoilButton, ICommand?>(nameof(OffCommand));
-
-    public static readonly StyledProperty<string?> IconPathProperty =
-        AvaloniaProperty.Register<CoilButton, string?>(nameof(IconPath));
+        AvaloniaProperty.Register<CoilMomentaryButton, ICommand?>(nameof(OffCommand));
 
     public static readonly StyledProperty<string?> IconPathOnProperty =
-        AvaloniaProperty.Register<CoilButton, string?>(nameof(IconPathOn));
+        AvaloniaProperty.Register<CoilMomentaryButton, string?>(nameof(IconPathOn));
 
     public static readonly StyledProperty<string?> IconPathOffProperty =
-        AvaloniaProperty.Register<CoilButton, string?>(nameof(IconPathOff));
+        AvaloniaProperty.Register<CoilMomentaryButton, string?>(nameof(IconPathOff));
 
     public event EventHandler<CoilButtonInfo>? CopyRequested;
     public event EventHandler? PasteRequested;
@@ -93,12 +93,6 @@ public partial class CoilButton : UserControl
         set => SetValue(OffCommandProperty, value);
     }
 
-    public string? IconPath
-    {
-        get => GetValue(IconPathProperty);
-        set => SetValue(IconPathProperty, value);
-    }
-
     public string? IconPathOn
     {
         get => GetValue(IconPathOnProperty);
@@ -111,7 +105,7 @@ public partial class CoilButton : UserControl
         set => SetValue(IconPathOffProperty, value);
     }
 
-    public CoilButton()
+    public CoilMomentaryButton()
     {
         InitializeComponent();
         
@@ -125,36 +119,60 @@ public partial class CoilButton : UserControl
         });
     }
 
-    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    private void OnPointerPressedHandler(object? sender, PointerPressedEventArgs e)
     {
-        base.OnPointerReleased(e);
-        
-        // Левый клик - переключить состояние (только если не было перетаскивания)
-        if (e.InitialPressMouseButton == MouseButton.Left)
+        // При нажатии левой кнопки мыши - включить катушку
+        var properties = e.GetCurrentPoint(this).Properties;
+        if (properties.IsLeftButtonPressed)
         {
-            OnToggleClick();
-            e.Handled = true;
+            _wasPressed = true;
+            _pressPoint = e.GetPosition(this);
+            OnCommand?.Execute(null);
+            IsActive = true; // Локально обновляем состояние
+            // НЕ помечаем как обработанное, чтобы DraggableControl мог начать перетаскивание
         }
-        // Показываем контекстное меню при правом клике
+    }
+
+    private void OnPointerReleasedHandler(object? sender, PointerReleasedEventArgs e)
+    {
+        // При отпускании левой кнопки - выключить катушку
+        if (e.InitialPressMouseButton == MouseButton.Left && _wasPressed)
+        {
+            _wasPressed = false;
+            OffCommand?.Execute(null);
+            IsActive = false; // Локально обновляем состояние
+            // НЕ помечаем как обработанное
+        }
+        // Правая кнопка - показать контекстное меню
         else if (e.InitialPressMouseButton == MouseButton.Right)
         {
             ShowContextMenu();
             e.Handled = true;
         }
     }
-
-    private void OnToggleClick()
+    
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        // Toggle состояние и выполнить соответствующую команду
-        if (IsActive)
+        base.OnPointerPressed(e);
+        OnPointerPressedHandler(this, e);
+    }
+
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        base.OnPointerReleased(e);
+        OnPointerReleasedHandler(this, e);
+    }
+    
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        
+        // Если указатель был захвачен и кнопка была нажата, отпускаем её
+        if (_wasPressed)
         {
-            // Текущее состояние ON, переключаем в OFF
+            _wasPressed = false;
             OffCommand?.Execute(null);
-        }
-        else
-        {
-            // Текущее состояние OFF, переключаем в ON
-            OnCommand?.Execute(null);
+            IsActive = false;
         }
     }
 
@@ -174,6 +192,24 @@ public partial class CoilButton : UserControl
             PasteRequested?.Invoke(this, EventArgs.Empty);
             e.Handled = true;
         }
+        // Пробел - нажатие кнопки (только если еще не активна)
+        else if (e.Key == Key.Space && !IsActive)
+        {
+            OnCommand?.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnKeyUp(KeyEventArgs e)
+    {
+        base.OnKeyUp(e);
+        
+        // Пробел отпущен - отпускание кнопки
+        if (e.Key == Key.Space)
+        {
+            OffCommand?.Execute(null);
+            e.Handled = true;
+        }
     }
 
     private void CopyButton()
@@ -187,6 +223,7 @@ public partial class CoilButton : UserControl
             CoilAddress = CoilAddress,
             TagName = SelectedTag?.Name,
             IsImageButton = false,
+            IsMomentary = true,
             X = parentDraggable?.X ?? 0,
             Y = parentDraggable?.Y ?? 0
         };
@@ -197,7 +234,7 @@ public partial class CoilButton : UserControl
     {
         var dialog = new Window
         {
-            Title = "Настройки кнопки",
+            Title = "Настройки кнопки без фиксации",
             Width = 500,
             Height = 520,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
@@ -217,7 +254,7 @@ public partial class CoilButton : UserControl
         stack.Children.Add(labelInput);
 
         // Поле для выбора иконки ON
-        var iconOnTextBlock = new TextBlock { Text = "Иконка ON (включено):", FontWeight = FontWeight.SemiBold };
+        var iconOnTextBlock = new TextBlock { Text = "Иконка ON (нажата):", FontWeight = FontWeight.SemiBold };
         var iconOnPanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 5 };
         var iconOnInput = new TextBox 
         { 
@@ -230,7 +267,6 @@ public partial class CoilButton : UserControl
         {
             if (dialog.StorageProvider.CanOpen)
             {
-                // Определяем путь к папке Assets
                 var assetsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
                 IStorageFolder? suggestedStartLocation = null;
                 
@@ -265,7 +301,7 @@ public partial class CoilButton : UserControl
         stack.Children.Add(iconOnPanel);
 
         // Поле для выбора иконки OFF
-        var iconOffTextBlock = new TextBlock { Text = "Иконка OFF (выключено):", FontWeight = FontWeight.SemiBold };
+        var iconOffTextBlock = new TextBlock { Text = "Иконка OFF (отпущена):", FontWeight = FontWeight.SemiBold };
         var iconOffPanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 5 };
         var iconOffInput = new TextBox 
         { 
@@ -278,7 +314,6 @@ public partial class CoilButton : UserControl
         {
             if (dialog.StorageProvider.CanOpen)
             {
-                // Определяем путь к папке Assets
                 var assetsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
                 IStorageFolder? suggestedStartLocation = null;
                 
@@ -311,10 +346,6 @@ public partial class CoilButton : UserControl
         iconOffPanel.Children.Add(iconOffBrowseBtn);
         stack.Children.Add(iconOffTextBlock);
         stack.Children.Add(iconOffPanel);
-
-        // Старое поле для обратной совместимости (скрыто)
-        var iconPanel = new StackPanel { IsVisible = false };
-        var iconInput = new TextBox { Text = IconPath ?? "" };
 
         // Разделитель
         stack.Children.Add(new Separator { Margin = new Thickness(0, 5, 0, 5) });
@@ -380,7 +411,6 @@ public partial class CoilButton : UserControl
                 {
                     Label = labelInput.Text;
                 }
-                // Сохраняем иконки ON/OFF
                 IconPathOn = !string.IsNullOrWhiteSpace(iconOnInput.Text) ? iconOnInput.Text : null;
                 IconPathOff = !string.IsNullOrWhiteSpace(iconOffInput.Text) ? iconOffInput.Text : null;
                 
@@ -455,7 +485,6 @@ public partial class CoilButton : UserControl
             {
                 Label = labelInput.Text;
             }
-            // Сохраняем иконки ON/OFF
             IconPathOn = !string.IsNullOrWhiteSpace(iconOnInput.Text) ? iconOnInput.Text : null;
             IconPathOff = !string.IsNullOrWhiteSpace(iconOffInput.Text) ? iconOffInput.Text : null;
             
@@ -477,182 +506,12 @@ public partial class CoilButton : UserControl
         stack.Children.Add(combo);
         stack.Children.Add(buttons);
     }
-
-    private async System.Threading.Tasks.Task ShowSimpleAddressDialog()
-    {
-        var dialog = new Window
-        {
-            Title = "Изменить адрес Coil",
-            Width = 350,
-            Height = 180,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            CanResize = false
-        };
-
-        var stack = new StackPanel { Margin = new Thickness(20), Spacing = 15 };
-        
-        var label = new TextBlock 
-        { 
-            Text = $"Текущий адрес: {CoilAddress}\nВведите новый адрес (0-65535):",
-            TextWrapping = TextWrapping.Wrap
-        };
-        
-        var input = new NumericUpDown
-        {
-            Minimum = 0,
-            Maximum = 65535,
-            Value = CoilAddress,
-            Increment = 1,
-            FormatString = "0"
-        };
-
-        var buttons = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right };
-        
-        var okButton = new Button { Content = "OK", Width = 80 };
-        okButton.Click += (s, e) =>
-        {
-            CoilAddress = (ushort)input.Value;
-            dialog.Close();
-        };
-        
-        var cancelButton = new Button { Content = "Отмена", Width = 80 };
-        cancelButton.Click += (s, e) => dialog.Close();
-
-        buttons.Children.Add(okButton);
-        buttons.Children.Add(cancelButton);
-        
-        stack.Children.Add(label);
-        stack.Children.Add(input);
-        stack.Children.Add(buttons);
-        
-        dialog.Content = stack;
-
-        if (this.VisualRoot is Window owner)
-        {
-            await dialog.ShowDialog(owner);
-        }
-    }
 }
 
-public class CoilStateBorderConverter : IValueConverter
+public class MomentaryStateTextConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is bool b && b ? Brushes.LimeGreen : Brushes.Gray;
-
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
-}
-
-public class CoilStateBackgroundConverter : IValueConverter
-{
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is bool b && b 
-            ? new SolidColorBrush(Color.Parse("#DCFCE7")) 
-            : new SolidColorBrush(Color.Parse("#F3F4F6"));
-
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
-}
-
-public class CoilStateIconConverter : IValueConverter
-{
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is bool b && b ? "●" : "○";
-
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
-}
-
-public class CoilStateTextColorConverter : IValueConverter
-{
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is bool b && b ? Brushes.Green : Brushes.DarkGray;
-
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
-}
-
-public class CoilStateTextConverter : IValueConverter
-{
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is bool b && b ? "ON" : "OFF";
-
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
-}
-
-public class PathToImageConverter : IValueConverter
-{
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        if (value is string path && !string.IsNullOrEmpty(path))
-        {
-            try
-            {
-                // Если это SVG файл, конвертируем его в PNG
-                if (SvgToPngConverter.IsSvgFile(path))
-                {
-                    // Проверяем абсолютный путь
-                    string? svgPath = null;
-                    if (File.Exists(path))
-                    {
-                        svgPath = path;
-                    }
-                    else
-                    {
-                        // Пробуем относительный путь от базовой директории
-                        var fullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
-                        if (File.Exists(fullPath))
-                        {
-                            svgPath = fullPath;
-                        }
-                    }
-
-                    if (svgPath != null)
-                    {
-                        // Конвертируем SVG в PNG
-                        var pngPath = SvgToPngConverter.ConvertSvgToPng(svgPath);
-                        if (pngPath != null && File.Exists(pngPath))
-                        {
-                            return new Avalonia.Media.Imaging.Bitmap(pngPath);
-                        }
-                    }
-                }
-
-                // Для не-SVG файлов или если конвертация не удалась
-                // Сначала пробуем avares:// схему для ресурсов
-                if (!path.StartsWith("avares://") && !Path.IsPathRooted(path))
-                {
-                    // Если относительный путь, пробуем как avares
-                    var avaresPath = $"avares://Scada.Client/{path}";
-                    try
-                    {
-                        var uri = new Uri(avaresPath);
-                        using var assetStream = Avalonia.Platform.AssetLoader.Open(uri);
-                        return new Avalonia.Media.Imaging.Bitmap(assetStream);
-                    }
-                    catch
-                    {
-                        // Если не получилось как ресурс, пробуем как файл
-                    }
-                }
-                
-                // Проверяем абсолютный путь
-                if (File.Exists(path))
-                {
-                    return new Avalonia.Media.Imaging.Bitmap(path);
-                }
-                
-                // Пробуем относительный путь от базовой директории
-                var fullPath2 = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
-                if (File.Exists(fullPath2))
-                {
-                    return new Avalonia.Media.Imaging.Bitmap(fullPath2);
-                }
-            }
-            catch (Exception ex)
-            {
-                // Для отладки выводим ошибку
-                System.Diagnostics.Debug.WriteLine($"Ошибка загрузки изображения '{value}': {ex.Message}");
-            }
-        }
-        return null;
-    }
+        => value is bool b && b ? "НАЖАТА" : "ОТПУЩЕНА";
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
 }

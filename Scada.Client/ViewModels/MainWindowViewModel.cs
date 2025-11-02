@@ -56,6 +56,10 @@ public class MainWindowViewModel : ViewModelBase
     private ushort _readCoilAddress = 100;
     private bool? _readCoilValue;
     
+    // Momentary button properties
+    private bool _momentaryActive;
+    private ushort _momentaryAddress = 20;
+    
     private bool _settingsLoaded;
     public bool SettingsLoaded
     {
@@ -77,6 +81,7 @@ public class MainWindowViewModel : ViewModelBase
         DisconnectCommand = ReactiveCommand.CreateFromTask(DisconnectAsync);
             ReadRegisterCommand = ReactiveCommand.CreateFromTask(ReadRegisterAsync, this.WhenAnyValue(vm => vm.IsConnected));
             OpenSettingsCommand = ReactiveCommand.Create(OpenSettings);
+            OpenTagsEditorCommand = ReactiveCommand.Create(OpenTagsEditor);
 
             // Coil write commands (enabled only for connected and selected Coils/Bool tag)
             var canWriteCoil = this.WhenAnyValue(vm => vm.IsConnected, vm => vm.SelectedTag,
@@ -101,6 +106,10 @@ public class MainWindowViewModel : ViewModelBase
             
             // Read coil command
             ReadCoilCommand = ReactiveCommand.CreateFromTask(ReadCoilAsync, canWrite);
+            
+            // Momentary button commands
+            MomentaryOnCommand = ReactiveCommand.CreateFromTask(async () => await WriteCoilWithAddressAsync(() => _momentaryAddress, true, v => MomentaryActive = v), canWrite);
+            MomentaryOffCommand = ReactiveCommand.CreateFromTask(async () => await WriteCoilWithAddressAsync(() => _momentaryAddress, false, v => MomentaryActive = v), canWrite);
     }
 
     public string ConnectionStatus
@@ -131,6 +140,7 @@ public class MainWindowViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> DisconnectCommand { get; }
     public ReactiveCommand<Unit, Unit> ReadRegisterCommand { get; }
     public ReactiveCommand<Unit, Unit> OpenSettingsCommand { get; }
+    public ReactiveCommand<Unit, Unit> OpenTagsEditorCommand { get; }
     public ReactiveCommand<Unit, Unit>? CoilOnCommand { get; private set; }
     public ReactiveCommand<Unit, Unit>? CoilOffCommand { get; private set; }
 
@@ -150,9 +160,16 @@ public class MainWindowViewModel : ViewModelBase
     
     // Read coil command
     public ReactiveCommand<Unit, Unit>? ReadCoilCommand { get; private set; }
+    
+    // Momentary button commands
+    public ReactiveCommand<Unit, Unit>? MomentaryOnCommand { get; private set; }
+    public ReactiveCommand<Unit, Unit>? MomentaryOffCommand { get; private set; }
 
     // Event to request settings window opening (handled in View code-behind)
     public event EventHandler? RequestOpenSettings;
+    
+    // Event to request tags editor window opening (handled in View code-behind)
+    public event EventHandler? RequestOpenTagsEditor;
 
     public ModbusConnectionConfig ConnectionConfig
     {
@@ -236,6 +253,11 @@ public class MainWindowViewModel : ViewModelBase
     private void OpenSettings()
     {
         RequestOpenSettings?.Invoke(this, EventArgs.Empty);
+    }
+    
+    private void OpenTagsEditor()
+    {
+        RequestOpenTagsEditor?.Invoke(this, EventArgs.Empty);
     }
 
     private void StartPolling()
@@ -386,6 +408,19 @@ public class MainWindowViewModel : ViewModelBase
     {
         get => _readCoilAddress;
         set => this.RaiseAndSetIfChanged(ref _readCoilAddress, value);
+    }
+    
+    // Momentary button properties
+    public bool MomentaryActive
+    {
+        get => _momentaryActive;
+        set => this.RaiseAndSetIfChanged(ref _momentaryActive, value);
+    }
+    
+    public ushort MomentaryAddress
+    {
+        get => _momentaryAddress;
+        set => this.RaiseAndSetIfChanged(ref _momentaryAddress, value);
     }
 
     public bool? ReadCoilValue

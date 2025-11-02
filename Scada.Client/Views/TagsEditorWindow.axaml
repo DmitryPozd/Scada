@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Scada.Client.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+        x:Class="Scada.Client.Views.TagsEditorWindow"
+        x:DataType="vm:TagsEditorWindowViewModel"
+        Title="Редактор тегов"
+        Width="900" Height="600"
+        WindowStartupLocation="CenterOwner">
+    
+    <Grid RowDefinitions="*,Auto" Margin="20">
+        <!-- DataGrid with tags -->
+        <DataGrid Grid.Row="0" 
+                  ItemsSource="{Binding Tags}"
+                  SelectedItem="{Binding SelectedTag}"
+                  AutoGenerateColumns="False"
+                  CanUserReorderColumns="True"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="True"
+                  GridLinesVisibility="All"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Название" Binding="{Binding Name}" Width="200"/>
+                <DataGridTextColumn Header="Адрес" Binding="{Binding Address}" Width="100"/>
+                <DataGridTextColumn Header="Тип регистра" Binding="{Binding Register}" Width="150"/>
+                <DataGridTextColumn Header="Тип данных" Binding="{Binding Type}" Width="120"/>
+                <DataGridTextColumn Header="Масштаб" Binding="{Binding Scale}" Width="80"/>
+                <DataGridTextColumn Header="Смещение" Binding="{Binding Offset}" Width="80"/>
+                <DataGridCheckBoxColumn Header="Включен" Binding="{Binding Enabled}" Width="80"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0" Spacing="10">
+            <Button Content="Добавить тег" Command="{Binding AddTagCommand}" Padding="15,5"/>
+            <Button Content="Удалить выбранный" Command="{Binding DeleteTagCommand}" Padding="15,5"/>
+            <Button Content="Сохранить" Click="OnSaveClick" Padding="15,5"/>
+            <Button Content="Отмена" Click="OnCancelClick" Padding="15,5"/>
+        </StackPanel>
+    </Grid>
+</Window>

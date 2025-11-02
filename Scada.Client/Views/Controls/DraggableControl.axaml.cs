@@ -11,6 +11,7 @@ public partial class DraggableControl : ContentControl
 {
     private Point _dragStartPoint;
     private bool _isDragging;
+    private bool _wasDragged; // Флаг: было ли реальное перемещение
 
     public static readonly StyledProperty<double> XProperty =
         AvaloniaProperty.Register<DraggableControl, double>(nameof(X), 0.0);
@@ -62,9 +63,10 @@ public partial class DraggableControl : ContentControl
         if (properties.IsLeftButtonPressed)
         {
             _isDragging = true;
+            _wasDragged = false;
             _dragStartPoint = e.GetPosition(this.Parent as Visual);
-            e.Pointer.Capture(this);
-            e.Handled = true;
+            // НЕ захватываем указатель и НЕ блокируем событие сразу
+            // Это позволит дочерним элементам (кнопкам) получить событие
         }
     }
 
@@ -72,16 +74,34 @@ public partial class DraggableControl : ContentControl
     {
         base.OnPointerMoved(e);
 
-        if (_isDragging && e.Pointer.Captured == this)
+        // Проверяем, что левая кнопка нажата
+        var properties = e.GetCurrentPoint(this).Properties;
+        if (_isDragging && properties.IsLeftButtonPressed)
         {
             var currentPoint = e.GetPosition(this.Parent as Visual);
             var delta = currentPoint - _dragStartPoint;
 
-            X += delta.X;
-            Y += delta.Y;
+            // Если переместились хотя бы на 2 пикселя - начинаем перетаскивание
+            if (!_wasDragged && (Math.Abs(delta.X) > 2 || Math.Abs(delta.Y) > 2))
+            {
+                _wasDragged = true;
+                // Теперь захватываем указатель для плавного перетаскивания
+                e.Pointer.Capture(this);
+            }
 
-            _dragStartPoint = currentPoint;
-            e.Handled = true;
+            if (_wasDragged)
+            {
+                X += delta.X;
+                Y += delta.Y;
+                _dragStartPoint = currentPoint;
+                e.Handled = true;
+            }
+        }
+        else if (_isDragging)
+        {
+            // Если _isDragging = true, но кнопка не нажата - сбрасываем состояние
+            _isDragging = false;
+            _wasDragged = false;
         }
     }
 
@@ -92,12 +112,33 @@ public partial class DraggableControl : ContentControl
         if (_isDragging)
         {
             _isDragging = false;
-            e.Pointer.Capture(null);
-            e.Handled = true;
-
-            // Вызываем событие для сохранения позиции
-            RaiseEvent(new RoutedEventArgs(PositionChangedEvent));
+            
+            // Освобождаем захват указателя, если он был
+            if (e.Pointer.Captured == this)
+            {
+                e.Pointer.Capture(null);
+            }
+            
+            // Если было реальное перемещение - блокируем событие и сохраняем позицию
+            if (_wasDragged)
+            {
+                e.Handled = true;
+                RaiseEvent(new RoutedEventArgs(PositionChangedEvent));
+            }
+            // Если не было перемещения - НЕ блокируем событие,
+            // чтобы оно дошло до кнопки
+            
+            _wasDragged = false;
         }
+    }
+
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        
+        // Сбрасываем состояние перетаскивания
+        _isDragging = false;
+        _wasDragged = false;
     }
 
     // Событие для уведомления о завершении перемещения

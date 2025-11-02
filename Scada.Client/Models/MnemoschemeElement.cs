@@ -9,6 +9,7 @@ namespace Scada.Client.Models;
 public enum ElementType
 {
     CoilButton,
+    CoilMomentaryButton,
     ImageButton,
     Pump,
     Valve,

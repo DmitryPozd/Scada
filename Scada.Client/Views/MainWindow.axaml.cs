@@ -93,6 +93,16 @@ public partial class MainWindow : Window
                         updatedCount++;
                     }
                 }
+                else if (draggable.Content is CoilMomentaryButton momentaryBtn)
+                {
+                    totalButtons++;
+                    if (coilValues.TryGetValue(momentaryBtn.CoilAddress, out bool value))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Updating CoilMomentaryButton at address {momentaryBtn.CoilAddress} to {value}, WAS: {momentaryBtn.IsActive}");
+                        momentaryBtn.IsActive = value;
+                        updatedCount++;
+                    }
+                }
                 else if (draggable.Content is ImageButton imgBtn)
                 {
                     totalButtons++;
@@ -173,6 +183,33 @@ public partial class MainWindow : Window
                     coilBtn.PasteRequested += OnButtonPasteRequested;
                     control = coilBtn;
                     break;
+                case CoilElement momentaryElem when momentaryElem.Type == ElementType.CoilMomentaryButton:
+                    var momentaryBtn = new CoilMomentaryButton
+                    {
+                        Label = momentaryElem.Label,
+                        CoilAddress = momentaryElem.CoilAddress,
+                        AvailableTags = vm.ConnectionConfig.Tags,
+                        IconPathOn = momentaryElem.IconPathOn,
+                        IconPathOff = momentaryElem.IconPathOff
+                    };
+                    if (!string.IsNullOrEmpty(momentaryElem.TagName))
+                    {
+                        momentaryBtn.SelectedTag = vm.ConnectionConfig.Tags.FirstOrDefault(t => t.Name == momentaryElem.TagName);
+                    }
+                    momentaryBtn.OnCommand = ReactiveCommand.CreateFromTask(async () =>
+                    {
+                        await vm.WriteCoilAsync(momentaryBtn.CoilAddress, true);
+                        momentaryBtn.IsActive = true;
+                    });
+                    momentaryBtn.OffCommand = ReactiveCommand.CreateFromTask(async () =>
+                    {
+                        await vm.WriteCoilAsync(momentaryBtn.CoilAddress, false);
+                        momentaryBtn.IsActive = false;
+                    });
+                    momentaryBtn.CopyRequested += OnButtonCopyRequested;
+                    momentaryBtn.PasteRequested += OnButtonPasteRequested;
+                    control = momentaryBtn;
+                    break;
                 case CoilElement imgElem when imgElem.Type == ElementType.ImageButton:
                     if (Enum.TryParse<ImageButtonType>(imgElem.ImageType, out var imgType))
                     {
@@ -242,6 +279,11 @@ public partial class MainWindow : Window
                 coilBtn.CopyRequested += OnButtonCopyRequested;
                 coilBtn.PasteRequested += OnButtonPasteRequested;
             }
+            else if (child is CoilMomentaryButton momentaryBtn)
+            {
+                momentaryBtn.CopyRequested += OnButtonCopyRequested;
+                momentaryBtn.PasteRequested += OnButtonPasteRequested;
+            }
             else if (child is ImageButton imgBtn)
             {
                 imgBtn.CopyRequested += OnButtonCopyRequested;
@@ -297,6 +339,28 @@ public partial class MainWindow : Window
             newButton.PasteRequested += OnButtonPasteRequested;
             buttonControl = newButton;
         }
+        else if (info.IsMomentary)
+        {
+            var newButton = new CoilMomentaryButton
+            {
+                Label = newLabel,
+                CoilAddress = info.CoilAddress,
+                AvailableTags = vm.ConnectionConfig.Tags
+            };
+            newButton.OnCommand = ReactiveCommand.CreateFromTask(async () =>
+            {
+                await vm.WriteCoilAsync(newButton.CoilAddress, true);
+                newButton.IsActive = true;
+            });
+            newButton.OffCommand = ReactiveCommand.CreateFromTask(async () =>
+            {
+                await vm.WriteCoilAsync(newButton.CoilAddress, false);
+                newButton.IsActive = false;
+            });
+            newButton.CopyRequested += OnButtonCopyRequested;
+            newButton.PasteRequested += OnButtonPasteRequested;
+            buttonControl = newButton;
+        }
         else
         {
             var newButton = new CoilButton
@@ -333,6 +397,7 @@ public partial class MainWindow : Window
         if (DataContext is MainWindowViewModel viewModel)
         {
             viewModel.RequestOpenSettings += OnRequestOpenSettings;
+            viewModel.RequestOpenTagsEditor += OnRequestOpenTagsEditor;
         }
     }
 
@@ -360,6 +425,79 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void OnRequestOpenTagsEditor(object? sender, EventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel mainVm)
+            return;
+
+        // Создаём копию коллекции тегов для редактирования
+        var tagsCopy = new ObservableCollection<TagDefinition>(
+            mainVm.ConnectionConfig.Tags.Select(t => new TagDefinition
+            {
+                Name = t.Name,
+                Address = t.Address,
+                Register = t.Register,
+                Type = t.Type,
+                Scale = t.Scale,
+                Offset = t.Offset,
+                Enabled = t.Enabled,
+                WordOrder = t.WordOrder
+            })
+        );
+
+        var editorVm = new TagsEditorWindowViewModel(tagsCopy);
+        var editorWindow = new TagsEditorWindow { DataContext = editorVm };
+        var result = await editorWindow.ShowDialog<bool>(this);
+
+        if (result)
+        {
+            // Сохраняем изменённые теги обратно в конфигурацию
+            mainVm.ConnectionConfig.Tags.Clear();
+            foreach (var tag in tagsCopy)
+            {
+                mainVm.ConnectionConfig.Tags.Add(tag);
+            }
+            await mainVm.SaveSettingsAsync();
+
+            // Обновляем доступные теги для всех элементов управления
+            UpdateAllButtonAvailableTags();
+        }
+    }
+
+    private void UpdateAllButtonAvailableTags()
+    {
+        if (this.Find<Canvas>("MnemoschemeCanvas") is Canvas canvas && DataContext is MainWindowViewModel vm)
+        {
+            foreach (var child in canvas.Children)
+            {
+                if (child is CoilButton coilBtn)
+                {
+                    coilBtn.AvailableTags = new ObservableCollection<TagDefinition>(
+                        vm.ConnectionConfig.Tags.Where(t => t.Register == RegisterType.Coils && t.Enabled)
+                    );
+                }
+                else if (child is CoilReadButton readBtn)
+                {
+                    readBtn.AvailableTags = new ObservableCollection<TagDefinition>(
+                        vm.ConnectionConfig.Tags.Where(t => t.Register == RegisterType.Coils && t.Enabled)
+                    );
+                }
+                else if (child is CoilMomentaryButton momentaryBtn)
+                {
+                    momentaryBtn.AvailableTags = new ObservableCollection<TagDefinition>(
+                        vm.ConnectionConfig.Tags.Where(t => t.Register == RegisterType.Coils && t.Enabled)
+                    );
+                }
+                else if (child is ImageButton imgBtn)
+                {
+                    imgBtn.AvailableTags = new ObservableCollection<TagDefinition>(
+                        vm.ConnectionConfig.Tags.Where(t => t.Register == RegisterType.Coils && t.Enabled)
+                    );
+                }
+            }
+        }
+    }
+
     private void UpdateButtonAvailableTags(MainWindowViewModel vm)
     {
         var canvas = this.FindControl<Canvas>("MnemoCanvas");
@@ -377,6 +515,16 @@ public partial class MainWindow : Window
                     if (!string.IsNullOrEmpty(selectedTagName))
                     {
                         coilBtn.SelectedTag = vm.ConnectionConfig.Tags.FirstOrDefault(t => t.Name == selectedTagName);
+                    }
+                }
+                else if (draggable.Content is CoilMomentaryButton momentaryBtn)
+                {
+                    var selectedTagName = momentaryBtn.SelectedTag?.Name;
+                    momentaryBtn.AvailableTags = vm.ConnectionConfig.Tags;
+                    // Восстанавливаем выбранный тег по имени
+                    if (!string.IsNullOrEmpty(selectedTagName))
+                    {
+                        momentaryBtn.SelectedTag = vm.ConnectionConfig.Tags.FirstOrDefault(t => t.Name == selectedTagName);
                     }
                 }
                 else if (draggable.Content is ImageButton imgBtn)
@@ -436,6 +584,20 @@ public partial class MainWindow : Window
                     TagName = coilBtn.SelectedTag?.Name,
                     IconPathOn = coilBtn.IconPathOn,
                     IconPathOff = coilBtn.IconPathOff
+                };
+            }
+            else if (element is CoilMomentaryButton momentaryBtn)
+            {
+                mnemoElement = new CoilElement
+                {
+                    Type = ElementType.CoilMomentaryButton,
+                    X = draggable.X,
+                    Y = draggable.Y,
+                    Label = momentaryBtn.Label,
+                    CoilAddress = momentaryBtn.CoilAddress,
+                    TagName = momentaryBtn.SelectedTag?.Name,
+                    IconPathOn = momentaryBtn.IconPathOn,
+                    IconPathOff = momentaryBtn.IconPathOff
                 };
             }
             else if (element is ImageButton imgBtn)
