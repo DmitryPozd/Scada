@@ -23,15 +23,58 @@
       <!-- Графическое представление с индикацией состояния -->
       <Viewbox Width="60" Height="50">
         <Canvas Width="100" Height="80">
-          <ContentControl>
-            <ContentControl.Content>
-              <Binding Path="ImageType" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}">
-                <Binding.Converter>
-                  <controls:ImageTypeToShapeConverter/>
-                </Binding.Converter>
-              </Binding>
-            </ContentControl.Content>
-          </ContentControl>
+          <Grid>
+            <!-- Иконка ON (когда активна и есть IconPathOn) -->
+            <Image Name="IconOn" Stretch="Uniform">
+              <Image.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                  <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" />
+                  <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                </MultiBinding>
+              </Image.IsVisible>
+              <Image.Source>
+                <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}">
+                  <Binding.Converter>
+                    <controls:PathToImageConverter/>
+                  </Binding.Converter>
+                </Binding>
+              </Image.Source>
+            </Image>
+            
+            <!-- Иконка OFF (когда не активна и есть IconPathOff) -->
+            <Image Name="IconOff" Stretch="Uniform">
+              <Image.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                  <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static BoolConverters.Not}" />
+                  <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                </MultiBinding>
+              </Image.IsVisible>
+              <Image.Source>
+                <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}">
+                  <Binding.Converter>
+                    <controls:PathToImageConverter/>
+                  </Binding.Converter>
+                </Binding>
+              </Image.Source>
+            </Image>
+            
+            <!-- Стандартная графика (если нет иконок) -->
+            <ContentControl Name="DefaultShape">
+              <ContentControl.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                  <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static ObjectConverters.IsNull}" />
+                  <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static ObjectConverters.IsNull}" />
+                </MultiBinding>
+              </ContentControl.IsVisible>
+              <ContentControl.Content>
+                <Binding Path="ImageType" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}">
+                  <Binding.Converter>
+                    <controls:ImageTypeToShapeConverter/>
+                  </Binding.Converter>
+                </Binding>
+              </ContentControl.Content>
+            </ContentControl>
+          </Grid>
         </Canvas>
       </Viewbox>
       

@@ -181,7 +181,9 @@ public partial class MainWindow : Window
                             Label = imgElem.Label,
                             CoilAddress = imgElem.CoilAddress,
                             ImageType = imgType,
-                            AvailableTags = vm.ConnectionConfig.Tags
+                            AvailableTags = vm.ConnectionConfig.Tags,
+                            IconPathOn = imgElem.IconPathOn,
+                            IconPathOff = imgElem.IconPathOff
                         };
                         if (!string.IsNullOrEmpty(imgElem.TagName))
                         {
@@ -446,7 +448,9 @@ public partial class MainWindow : Window
                     Label = imgBtn.Label,
                     CoilAddress = imgBtn.CoilAddress,
                     TagName = imgBtn.SelectedTag?.Name,
-                    ImageType = imgBtn.ImageType.ToString()
+                    ImageType = imgBtn.ImageType.ToString(),
+                    IconPathOn = imgBtn.IconPathOn,
+                    IconPathOff = imgBtn.IconPathOff
                 };
             }
             else if (element is PumpControl pump)

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Windows.Input;
 using Avalonia;
@@ -10,7 +11,9 @@ using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using Scada.Client.Models;
+using Scada.Client.Services;
 
 namespace Scada.Client.Views.Controls;
 
@@ -48,6 +51,12 @@ public partial class ImageButton : UserControl
 
     public static readonly StyledProperty<ICommand?> OffCommandProperty =
         AvaloniaProperty.Register<ImageButton, ICommand?>(nameof(OffCommand));
+
+    public static readonly StyledProperty<string?> IconPathOnProperty =
+        AvaloniaProperty.Register<ImageButton, string?>(nameof(IconPathOn));
+
+    public static readonly StyledProperty<string?> IconPathOffProperty =
+        AvaloniaProperty.Register<ImageButton, string?>(nameof(IconPathOff));
 
     public event EventHandler<CoilButtonInfo>? CopyRequested;
     public event EventHandler? PasteRequested;
@@ -98,6 +107,18 @@ public partial class ImageButton : UserControl
     {
         get => GetValue(OffCommandProperty);
         set => SetValue(OffCommandProperty, value);
+    }
+
+    public string? IconPathOn
+    {
+        get => GetValue(IconPathOnProperty);
+        set => SetValue(IconPathOnProperty, value);
+    }
+
+    public string? IconPathOff
+    {
+        get => GetValue(IconPathOffProperty);
+        set => SetValue(IconPathOffProperty, value);
     }
 
     public ImageButton()
@@ -181,8 +202,8 @@ public partial class ImageButton : UserControl
         var dialog = new Window
         {
             Title = "Настройки устройства",
-            Width = 450,
-            Height = 380,
+            Width = 500,
+            Height = 580,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };
@@ -198,6 +219,100 @@ public partial class ImageButton : UserControl
         };
         stack.Children.Add(labelTextBlock);
         stack.Children.Add(labelInput);
+
+        // Поле для выбора иконки ON
+        var iconOnTextBlock = new TextBlock { Text = "Иконка ON (включено):", FontWeight = FontWeight.SemiBold };
+        var iconOnPanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 5 };
+        var iconOnInput = new TextBox 
+        { 
+            Text = IconPathOn ?? "",
+            Watermark = "Assets/device_on.png",
+            MinWidth = 300
+        };
+        var iconOnBrowseBtn = new Button { Content = "📁", Width = 35, Padding = new Thickness(5) };
+        iconOnBrowseBtn.Click += async (s, e) =>
+        {
+            if (dialog.StorageProvider.CanOpen)
+            {
+                var assetsPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
+                IStorageFolder? suggestedStartLocation = null;
+                
+                if (Directory.Exists(assetsPath))
+                {
+                    suggestedStartLocation = await dialog.StorageProvider.TryGetFolderFromPathAsync(new Uri(assetsPath));
+                }
+                
+                var files = await dialog.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                {
+                    Title = "Выберите иконку ON",
+                    AllowMultiple = false,
+                    SuggestedStartLocation = suggestedStartLocation,
+                    FileTypeFilter = new[]
+                    {
+                        new FilePickerFileType("Изображения")
+                        {
+                            Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.svg" }
+                        }
+                    }
+                });
+                
+                if (files.Count > 0)
+                {
+                    iconOnInput.Text = files[0].Path.LocalPath;
+                }
+            }
+        };
+        iconOnPanel.Children.Add(iconOnInput);
+        iconOnPanel.Children.Add(iconOnBrowseBtn);
+        stack.Children.Add(iconOnTextBlock);
+        stack.Children.Add(iconOnPanel);
+
+        // Поле для выбора иконки OFF
+        var iconOffTextBlock = new TextBlock { Text = "Иконка OFF (выключено):", FontWeight = FontWeight.SemiBold };
+        var iconOffPanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 5 };
+        var iconOffInput = new TextBox 
+        { 
+            Text = IconPathOff ?? "",
+            Watermark = "Assets/device_off.png",
+            MinWidth = 300
+        };
+        var iconOffBrowseBtn = new Button { Content = "📁", Width = 35, Padding = new Thickness(5) };
+        iconOffBrowseBtn.Click += async (s, e) =>
+        {
+            if (dialog.StorageProvider.CanOpen)
+            {
+                var assetsPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
+                IStorageFolder? suggestedStartLocation = null;
+                
+                if (Directory.Exists(assetsPath))
+                {
+                    suggestedStartLocation = await dialog.StorageProvider.TryGetFolderFromPathAsync(new Uri(assetsPath));
+                }
+                
+                var files = await dialog.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                {
+                    Title = "Выберите иконку OFF",
+                    AllowMultiple = false,
+                    SuggestedStartLocation = suggestedStartLocation,
+                    FileTypeFilter = new[]
+                    {
+                        new FilePickerFileType("Изображения")
+                        {
+                            Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.svg" }
+                        }
+                    }
+                });
+                
+                if (files.Count > 0)
+                {
+                    iconOffInput.Text = files[0].Path.LocalPath;
+                }
+            }
+        };
+        iconOffPanel.Children.Add(iconOffInput);
+        iconOffPanel.Children.Add(iconOffBrowseBtn);
+        stack.Children.Add(iconOffTextBlock);
+        stack.Children.Add(iconOffPanel);
 
         // Разделитель
         stack.Children.Add(new Separator { Margin = new Thickness(0, 5, 0, 5) });
@@ -234,12 +349,12 @@ public partial class ImageButton : UserControl
         if (AvailableTags == null || !AvailableTags.Any())
         {
             // Если тегов нет, показываем простой ввод адреса
-            await ShowSimpleAddressDialogInStack(stack, dialog, labelInput);
+            await ShowSimpleAddressDialogInStack(stack, dialog, labelInput, iconOnInput, iconOffInput);
         }
         else
         {
             // Показываем выбор тега
-            ShowTagSelectionInDialog(stack, dialog, labelInput);
+            ShowTagSelectionInDialog(stack, dialog, labelInput, iconOnInput, iconOffInput);
         }
         
         dialog.Content = stack;
@@ -250,7 +365,7 @@ public partial class ImageButton : UserControl
         }
     }
 
-    private void ShowTagSelectionInDialog(StackPanel stack, Window dialog, TextBox labelInput)
+    private void ShowTagSelectionInDialog(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput)
     {
         var label = new TextBlock 
         { 
@@ -293,6 +408,10 @@ public partial class ImageButton : UserControl
             {
                 Label = labelInput.Text;
             }
+            // Сохраняем иконки ON/OFF
+            IconPathOn = !string.IsNullOrWhiteSpace(iconOnInput.Text) ? iconOnInput.Text : null;
+            IconPathOff = !string.IsNullOrWhiteSpace(iconOffInput.Text) ? iconOffInput.Text : null;
+            
             if (combo.SelectedItem is ComboBoxItem item && item.Tag is TagDefinition selectedTag)
             {
                 SelectedTag = selectedTag;
@@ -312,7 +431,7 @@ public partial class ImageButton : UserControl
         stack.Children.Add(buttons);
     }
 
-    private System.Threading.Tasks.Task ShowSimpleAddressDialogInStack(StackPanel stack, Window dialog, TextBox labelInput)
+    private System.Threading.Tasks.Task ShowSimpleAddressDialogInStack(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput)
     {
         var label = new TextBlock 
         { 
@@ -344,6 +463,11 @@ public partial class ImageButton : UserControl
                 Label = labelInput.Text;
             }
             CoilAddress = (ushort)input.Value;
+            
+            // Сохранить пути к иконкам
+            IconPathOn = !string.IsNullOrWhiteSpace(iconOnInput.Text) ? iconOnInput.Text : null;
+            IconPathOff = !string.IsNullOrWhiteSpace(iconOffInput.Text) ? iconOffInput.Text : null;
+            
             dialog.Close();
         };
         
