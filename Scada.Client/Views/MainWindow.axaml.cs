@@ -151,7 +151,9 @@ public partial class MainWindow : Window
                     {
                         Label = coilElem.Label,
                         CoilAddress = coilElem.CoilAddress,
-                        AvailableTags = vm.ConnectionConfig.Tags
+                        AvailableTags = vm.ConnectionConfig.Tags,
+                        IconPathOn = coilElem.IconPathOn,
+                        IconPathOff = coilElem.IconPathOff
                     };
                     if (!string.IsNullOrEmpty(coilElem.TagName))
                     {
@@ -429,7 +431,9 @@ public partial class MainWindow : Window
                     Y = draggable.Y,
                     Label = coilBtn.Label,
                     CoilAddress = coilBtn.CoilAddress,
-                    TagName = coilBtn.SelectedTag?.Name
+                    TagName = coilBtn.SelectedTag?.Name,
+                    IconPathOn = coilBtn.IconPathOn,
+                    IconPathOff = coilBtn.IconPathOff
                 };
             }
             else if (element is ImageButton imgBtn)
