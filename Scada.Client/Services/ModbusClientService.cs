@@ -1,5 +1,6 @@
 using System;
 using System.Buffers.Binary;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentModbus;
 
@@ -12,6 +13,11 @@ public class ModbusClientService : IModbusClientService, IDisposable
 {
     private ModbusTcpClient? _client;
     private byte _unitId;
+    
+    // Семафор для предотвращения одновременных записей
+    private readonly SemaphoreSlim _writeSemaphore = new SemaphoreSlim(1, 1);
+    private DateTime _lastWriteTime = DateTime.MinValue;
+    private const int MinWriteDelayMs = 50; // Минимальная задержка между записями
 
     public bool IsConnected => _client != null && _client.IsConnected;
 
@@ -91,16 +97,36 @@ public class ModbusClientService : IModbusClientService, IDisposable
         if (_client == null || !_client.IsConnected)
             throw new InvalidOperationException("Modbus client is not connected.");
 
+        await _writeSemaphore.WaitAsync();
         try
         {
+            // Проверяем, прошло ли достаточно времени с последней записи
+            var timeSinceLastWrite = (DateTime.Now - _lastWriteTime).TotalMilliseconds;
+            if (timeSinceLastWrite < MinWriteDelayMs)
+            {
+                var delayNeeded = (int)(MinWriteDelayMs - timeSinceLastWrite);
+                System.Diagnostics.Debug.WriteLine($"WriteCoil: задержка {delayNeeded}мс перед записью адреса {address}");
+                await Task.Delay(delayNeeded);
+            }
+
+            System.Diagnostics.Debug.WriteLine($"WriteCoil: запись адреса {address} = {value}");
+            
             await Task.Run(() => _client.WriteSingleCoil(_unitId, address, value));
+            
+            _lastWriteTime = DateTime.Now;
+            System.Diagnostics.Debug.WriteLine($"WriteCoil: успешно записан адрес {address} = {value}");
         }
         catch (FluentModbus.ModbusException ex)
         {
+            System.Diagnostics.Debug.WriteLine($"WriteCoil ERROR: адрес {address}, ошибка: {ex.Message}");
             throw new InvalidOperationException(
                 $"Ошибка записи катушки по адресу {address}: {ex.Message}. " +
                 $"Проверьте, что адрес существует на контроллере и поддерживает запись.", 
                 ex);
+        }
+        finally
+        {
+            _writeSemaphore.Release();
         }
     }
 
