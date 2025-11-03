@@ -3,18 +3,73 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:Scada.Client.ViewModels"
-        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+        xmlns:system="clr-namespace:System;assembly=System.Runtime"
+        mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="600"
         x:Class="Scada.Client.Views.TagsEditorWindow"
         x:DataType="vm:TagsEditorWindowViewModel"
-        Title="Редактор тегов"
-        Width="900" Height="600"
+        Title="Редактор активных тегов"
+        Width="1100" Height="600"
         WindowStartupLocation="CenterOwner">
     
-    <Grid RowDefinitions="*,Auto" Margin="20">
-        <!-- DataGrid with tags -->
-        <DataGrid Grid.Row="0" 
-                  ItemsSource="{Binding Tags}"
-                  SelectedItem="{Binding SelectedTag}"
+    <Grid ColumnDefinitions="2*,20,3*" RowDefinitions="Auto,*,Auto" Margin="20">
+        
+        <!-- Левая панель: Поиск и доступные тэги -->
+        <StackPanel Grid.Column="0" Grid.Row="0" Spacing="10">
+            <TextBlock Text="Поиск тегов (из tags.json)" FontWeight="Bold" FontSize="14"/>
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Grid.Column="0" Text="{Binding SearchText}" Watermark="Введите имя или адрес тега..." />
+                <Button Grid.Column="1" Content="🔍" Command="{Binding SearchTagsCommand}" 
+                        Padding="10,5" Margin="5,0,0,0" ToolTip.Tip="Поиск"/>
+            </Grid>
+            
+            <TextBlock Text="Быстрое добавление диапазона" FontWeight="SemiBold" FontSize="12" Margin="0,10,0,0"/>
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Grid.Column="0" Text="{Binding RangeText}" Watermark="Например: Y0-Y50, M100-M200" />
+                <Button Grid.Column="1" Content="➕" Command="{Binding AddRangeCommand}" 
+                        Padding="10,5" Margin="5,0,0,0" ToolTip.Tip="Добавить диапазон"/>
+            </Grid>
+        </StackPanel>
+        
+        <DataGrid Grid.Column="0" Grid.Row="1"
+                  ItemsSource="{Binding AvailableTags}"
+                  SelectedItem="{Binding SelectedAvailableTag}"
+                  AutoGenerateColumns="False"
+                  CanUserReorderColumns="False"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="True"
+                  GridLinesVisibility="All"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                  Margin="0,10,0,0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Название" Binding="{Binding Name}" Width="120" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Адрес" Binding="{Binding Address}" Width="80" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Тип рег." Binding="{Binding Register}" Width="80" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Тип дан." Binding="{Binding Type}" Width="80" IsReadOnly="True"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <StackPanel Grid.Column="0" Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+            <Button Content="➡️ Добавить в активные" Command="{Binding AddTagCommand}" Padding="15,5"/>
+        </StackPanel>
+
+        <!-- Разделитель -->
+        <Border Grid.Column="1" Grid.Row="0" Grid.RowSpan="3" 
+                Background="{DynamicResource CardStrokeColorDefaultBrush}" Width="2"/>
+
+        <!-- Правая панель: Активные тэги (опрашиваемые) -->
+        <StackPanel Grid.Column="2" Grid.Row="0" Spacing="5">
+            <TextBlock Text="Активные теги (будут опрашиваться)" 
+                       FontWeight="Bold" FontSize="14"/>
+            <TextBlock Text="💡 Используйте Ctrl+Click или Shift+Click для множественного выделения" 
+                       FontSize="11" Foreground="Gray" Margin="0,0,0,5"/>
+        </StackPanel>
+        
+        <DataGrid Grid.Column="2" Grid.Row="1"
+                  Name="ActiveTagsDataGrid"
+                  ItemsSource="{Binding ActiveTags}"
+                  SelectedItem="{Binding SelectedActiveTag}"
+                  SelectionMode="Extended"
                   AutoGenerateColumns="False"
                   CanUserReorderColumns="True"
                   CanUserResizeColumns="True"
@@ -23,21 +78,21 @@
                   BorderThickness="1"
                   BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Название" Binding="{Binding Name}" Width="200"/>
-                <DataGridTextColumn Header="Адрес" Binding="{Binding Address}" Width="100"/>
-                <DataGridTextColumn Header="Тип регистра" Binding="{Binding Register}" Width="150"/>
-                <DataGridTextColumn Header="Тип данных" Binding="{Binding Type}" Width="120"/>
+                <DataGridTextColumn Header="Название" Binding="{Binding Name}" Width="120" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Адрес" Binding="{Binding Address}" Width="80" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Тип рег." Binding="{Binding Register}" Width="100" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Тип дан." Binding="{Binding Type}" Width="80" IsReadOnly="True"/>
                 <DataGridTextColumn Header="Масштаб" Binding="{Binding Scale}" Width="80"/>
                 <DataGridTextColumn Header="Смещение" Binding="{Binding Offset}" Width="80"/>
                 <DataGridCheckBoxColumn Header="Включен" Binding="{Binding Enabled}" Width="80"/>
             </DataGrid.Columns>
         </DataGrid>
 
-        <!-- Buttons -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0" Spacing="10">
-            <Button Content="Добавить тег" Command="{Binding AddTagCommand}" Padding="15,5"/>
-            <Button Content="Удалить выбранный" Command="{Binding DeleteTagCommand}" Padding="15,5"/>
-            <Button Content="Сохранить" Click="OnSaveClick" Padding="15,5"/>
+        <!-- Кнопки управления -->
+        <StackPanel Grid.Column="2" Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0" Spacing="10">
+            <Button Content="🗑️ Удалить все" Command="{Binding DeleteAllTagsCommand}" Padding="15,5" ToolTip.Tip="Удалить все активные тэги"/>
+            <Button Content="❌ Удалить выбранные" Command="{Binding DeleteTagCommand}" Padding="15,5" ToolTip.Tip="Удалить выбранные тэги (можно выделить несколько)"/>
+            <Button Content="💾 Сохранить" Click="OnSaveClick" Padding="15,5"/>
             <Button Content="Отмена" Click="OnCancelClick" Padding="15,5"/>
         </StackPanel>
     </Grid>

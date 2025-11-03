@@ -17,6 +17,7 @@ public class MainWindowViewModel : ViewModelBase
 {
     private readonly IModbusClientService _modbusService;
     private readonly ISettingsService _settingsService;
+    private readonly ITagsConfigService _tagsConfigService;
     private string _connectionStatus = "Отключен";
     private bool _isConnected;
     private ushort _registerValue;
@@ -73,6 +74,7 @@ public class MainWindowViewModel : ViewModelBase
     {
     _modbusService = new ModbusClientService();
     _settingsService = new SettingsService();
+    _tagsConfigService = new TagsConfigService();
 
     // Load settings asynchronously on startup
     _ = LoadSettingsAsync();
@@ -440,6 +442,23 @@ public class MainWindowViewModel : ViewModelBase
             await PollGroupCoilsAsync(enabled);
             // НЕ перезаписываем статус - оставляем сообщение из PollGroupCoilsAsync
         }
+        catch (FluentModbus.ModbusException ex) when (ex.Message.Contains("protocol identifier"))
+        {
+            // Критическая ошибка протокола - переподключаемся
+            ConnectionStatus = "⚠️ Ошибка протокола, переподключение...";
+            System.Diagnostics.Debug.WriteLine($"Protocol error: {ex.Message}. Reconnecting...");
+            
+            try
+            {
+                await DisconnectAsync();
+                await Task.Delay(1000); // Пауза перед переподключением
+                await ConnectAsync();
+            }
+            catch (Exception reconEx)
+            {
+                ConnectionStatus = $"❌ Ошибка переподключения: {reconEx.Message}";
+            }
+        }
         catch (Exception ex)
         {
             ConnectionStatus = $"⚠ Ошибка опроса: {ex.Message}";
@@ -459,16 +478,70 @@ public class MainWindowViewModel : ViewModelBase
     private async Task PollGroupAsync(System.Collections.ObjectModel.ObservableCollection<TagDefinition> tags, RegisterType regType)
     {
         var group = tags.Where(t => t.Enabled && t.Register == regType).OrderBy(t => t.Address).ToList();
-        if (group.Count == 0) return;
+        
+        if (group.Count == 0)
+        {
+            return;
+        }
 
         // Compute block span [min, max]
         ushort min = group.Min(t => t.Address);
         int max = group.Max(t => t.Address + GetWordCount(t.Type) - 1);
         int count = max - min + 1;
 
-        ushort[] block = regType == RegisterType.Holding
-            ? await _modbusService.ReadHoldingRegistersAsync(min, (ushort)count)
-            : await _modbusService.ReadInputRegistersAsync(min, (ushort)count);
+        // Если диапазон слишком большой (>125 регистров) - читаем поштучно
+        const int MAX_BLOCK_SIZE = 125;
+        
+        if (count > MAX_BLOCK_SIZE)
+        {
+            // Читаем каждый тег отдельно
+            foreach (var tag in group)
+            {
+                try
+                {
+                    ushort[] values = regType == RegisterType.Holding
+                        ? await _modbusService.ReadHoldingRegistersAsync(tag.Address, (ushort)GetWordCount(tag.Type))
+                        : await _modbusService.ReadInputRegistersAsync(tag.Address, (ushort)GetWordCount(tag.Type));
+                    
+                    ParseTagValueFromRegisters(tag, values);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to read {regType} tag {tag.Name} at {tag.Address}: {ex.Message}");
+                }
+            }
+            return;
+        }
+
+        ushort[] block;
+        try
+        {
+            block = regType == RegisterType.Holding
+                ? await _modbusService.ReadHoldingRegistersAsync(min, (ushort)count)
+                : await _modbusService.ReadInputRegistersAsync(min, (ushort)count);
+        }
+        catch (Exception ex)
+        {
+            // Блочное чтение не удалось - пробуем читать поштучно
+            System.Diagnostics.Debug.WriteLine($"Block read {regType} [{min}-{max}] failed: {ex.Message}. Switching to individual reads.");
+            
+            foreach (var tag in group)
+            {
+                try
+                {
+                    ushort[] values = regType == RegisterType.Holding
+                        ? await _modbusService.ReadHoldingRegistersAsync(tag.Address, (ushort)GetWordCount(tag.Type))
+                        : await _modbusService.ReadInputRegistersAsync(tag.Address, (ushort)GetWordCount(tag.Type));
+                    
+                    ParseTagValueFromRegisters(tag, values);
+                }
+                catch (Exception tagEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to read {regType} tag {tag.Name} at {tag.Address}: {tagEx.Message}");
+                }
+            }
+            return;
+        }
 
         foreach (var tag in group)
         {
@@ -477,31 +550,36 @@ public class MainWindowViewModel : ViewModelBase
             var regs = new ushort[words];
             for (int i = 0; i < words; i++) regs[i] = block[offset + i];
 
-            // Apply word order for multi-word types
-            if (words > 1 && tag.WordOrder == WordOrder.LowHigh)
-            {
-                Array.Reverse(regs);
-            }
+            ParseTagValueFromRegisters(tag, regs);
+        }
+    }
 
-            double val = ParseValue(regs, tag.Type);
-            val = val * tag.Scale + tag.Offset;
-            tag.Value = val;
+    private void ParseTagValueFromRegisters(TagDefinition tag, ushort[] regs)
+    {
+        // Apply word order for multi-word types
+        if (regs.Length > 1 && tag.WordOrder == WordOrder.LowHigh)
+        {
+            Array.Reverse(regs);
+        }
 
-            switch (tag.Name)
-            {
-                case "Pump1Running":
-                    Pump1Running = val != 0;
-                    break;
-                case "Pump1Alarm":
-                    Pump1Alarm = val != 0;
-                    break;
-                case "Valve1Percent":
-                    Valve1OpenPercent = val;
-                    break;
-                case "Sensor1Value":
-                    Sensor1Value = val;
-                    break;
-            }
+        double val = ParseValue(regs, tag.Type);
+        val = val * tag.Scale + tag.Offset;
+        tag.Value = val;
+
+        switch (tag.Name)
+        {
+            case "Pump1Running":
+                Pump1Running = val != 0;
+                break;
+            case "Pump1Alarm":
+                Pump1Alarm = val != 0;
+                break;
+            case "Valve1Percent":
+                Valve1OpenPercent = val;
+                break;
+            case "Sensor1Value":
+                Sensor1Value = val;
+                break;
         }
     }
 
@@ -611,7 +689,7 @@ public class MainWindowViewModel : ViewModelBase
                 }
                 catch (Exception ex)
                 {
-                    // Ошибка чтения конкретного Coil - пропускаем и идём дальше
+                    // Ошибка чтения конкретного Coil - тихо пропускаем
                     System.Diagnostics.Debug.WriteLine($"Failed to read Coil at address {tag.Address}: {ex.Message}");
                 }
             }
@@ -629,6 +707,54 @@ public class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private async Task PollGroupDiscreteInputsAsync(System.Collections.ObjectModel.ObservableCollection<TagDefinition> tags)
+    {
+        // Читаем теги Y через Discrete Inputs (функция Modbus 0x02)
+        // Для Haiwell PLC, если потребуется
+        var yTags = tags.Where(t => t.Enabled && t.Register == RegisterType.Input && t.Name.StartsWith("Y")).OrderBy(t => t.Address).ToList();
+        
+        if (yTags.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var coilValues = new Dictionary<ushort, bool>();
+
+            // Читаем каждый Y-тег ОТДЕЛЬНО через Discrete Inputs
+            foreach (var tag in yTags)
+            {
+                try
+                {
+                    var result = await _modbusService.ReadDiscreteInputsAsync(tag.Address, 1);
+                    bool bit = result[0];
+                    double val = bit ? 1.0 : 0.0;
+                    val = val * tag.Scale + tag.Offset;
+                    tag.Value = val;
+
+                    // Добавляем в словарь для обновления кнопок
+                    coilValues[tag.Address] = bit;
+                }
+                catch (Exception ex)
+                {
+                    // Тихо пропускаем ошибки
+                    System.Diagnostics.Debug.WriteLine($"Failed to read Discrete Input at address {tag.Address}: {ex.Message}");
+                }
+            }
+
+            // Уведомляем подписчиков об обновлении Y-тегов
+            if (CoilTagsUpdated != null && coilValues.Count > 0)
+            {
+                CoilTagsUpdated.Invoke(this, coilValues);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PollGroupDiscreteInputsAsync failed: {ex}");
+        }
+    }
+
     private async Task LoadSettingsAsync()
     {
         var loaded = await _settingsService.LoadAsync();
@@ -637,10 +763,41 @@ public class MainWindowViewModel : ViewModelBase
             ConnectionConfig = loaded;
         }
         
-        // Добавляем тестовые теги по умолчанию, если коллекция пустая
+        // Если теги пустые, загружаем из tags.json (первые 20 каждого типа)
         if (ConnectionConfig.Tags.Count == 0)
         {
-            InitializeDefaultTags();
+            Console.WriteLine("=== Tags are empty, loading from tags.json... ===");
+            var tagsFromFile = await _tagsConfigService.LoadFirstNTagsPerTypeAsync(20);
+            Console.WriteLine($"=== Received {tagsFromFile.Count} tags from TagsConfigService ===");
+            
+            if (tagsFromFile.Count > 0)
+            {
+                foreach (var tag in tagsFromFile)
+                {
+                    ConnectionConfig.Tags.Add(tag);
+                    Console.WriteLine($"  Added tag: {tag.Name}, Register={tag.Register}, Type={tag.Type}");
+                }
+                Console.WriteLine($"=== Total tags in ConnectionConfig: {ConnectionConfig.Tags.Count} ===");
+                
+                // Проверяем типы регистров
+                var coilCount = ConnectionConfig.Tags.Count(t => t.Register == RegisterType.Coils);
+                var inputCount = ConnectionConfig.Tags.Count(t => t.Register == RegisterType.Input);
+                var holdingCount = ConnectionConfig.Tags.Count(t => t.Register == RegisterType.Holding);
+                Console.WriteLine($"=== Register types: Coils={coilCount}, Input={inputCount}, Holding={holdingCount} ===");
+                
+                // Сохраняем настройки с загруженными тегами
+                await SaveSettingsAsync();
+            }
+            else
+            {
+                Console.WriteLine("=== No tags loaded from tags.json, using default tags ===");
+                // Если tags.json не найден, используем старые дефолтные теги
+                InitializeDefaultTags();
+            }
+        }
+        else
+        {
+            Console.WriteLine($"=== Tags already exist in settings: {ConnectionConfig.Tags.Count} tags ===");
         }
         
         // Сигнализируем о завершении загрузки

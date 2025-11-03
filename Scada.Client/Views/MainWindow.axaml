@@ -8,7 +8,8 @@
         x:Class="Scada.Client.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="SCADA - Мнемосхема"
-        Width="1920" Height="1080">
+        Width="1920" Height="1080"
+        Closing="OnWindowClosing">
     
     <Grid RowDefinitions="Auto,*,Auto" Margin="10">
         <!-- Connection Status Bar -->

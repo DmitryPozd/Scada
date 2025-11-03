@@ -1,6 +1,6 @@
 # Copilot instructions for this repository
 
-Last updated: 2025-10-27
+Last updated: 2025-11-03
 
 Avalonia UI desktop SCADA application for Modbus TCP controller communication. Built with .NET 8, ReactiveUI MVVM, and FluentModbus client.
 
@@ -17,21 +17,22 @@ Avalonia UI desktop SCADA application for Modbus TCP controller communication. B
 **Project structure**:
 ```
 Scada.Client/
-├── Models/          ModbusConnectionConfig, TagDefinition, TagEnums (RegisterType, DataType, WordOrder), CoilButtonInfo, MnemoschemeElement hierarchy
-├── ViewModels/      ViewModelBase, MainWindowViewModel, SettingsWindowViewModel
-├── Views/           MainWindow.axaml, SettingsWindow.axaml
+├── Models/          ModbusConnectionConfig, TagDefinition, TagEnums (RegisterType, DataType, WordOrder), CoilButtonInfo, MnemoschemeElement hierarchy, TagsConfiguration
+├── ViewModels/      ViewModelBase, MainWindowViewModel, SettingsWindowViewModel, TagsEditorWindowViewModel
+├── Views/           MainWindow.axaml, SettingsWindow.axaml, TagsEditorWindow.axaml
 │   └── Controls/    PumpControl, ValveControl, SensorIndicator, CoilButton, ImageButton, DraggableControl (mnemoscheme UI components)
-└── Services/        IModbusClientService, ModbusClientService, ISettingsService, SettingsService
+└── Services/        IModbusClientService, ModbusClientService, ISettingsService, SettingsService, ITagsConfigService, TagsConfigService
 ```
 
 **Data flow**:
 1. `MainWindowViewModel` owns `IModbusClientService` and `ISettingsService` instances (direct instantiation, no DI yet).
 2. ReactiveCommands (`ConnectCommand`, `ReadRegisterCommand`, `CoilOnCommand/OffCommand`) trigger async service calls.
 3. Service uses `FluentModbus.ModbusTcpClient` to read/write registers/coils over TCP.
-4. Tag-based polling: `Observable.Interval` polls enabled tags at configured interval, groups by register type for batch reads.
-5. Properties (`ConnectionStatus`, `Pump1Running`, etc.) raise change notifications via ReactiveUI's `RaiseAndSetIfChanged`.
-6. AXAML bindings (compiled, with `x:DataType`) update UI automatically.
-7. Settings persist to `%AppData%/Scada.Client/settings.json` (JSON serialization).
+4. **Tag-based polling**: `Observable.Interval` polls **only active tags** (selected by user via `TagsEditorWindow`) at configured interval, groups by register type for batch reads.
+5. **Active tags management**: `TagsEditorWindow` allows user to select specific tags from full `tags.json` database (35,421 tags), only selected tags saved to `settings.json` and polled.
+6. Properties (`ConnectionStatus`, `Pump1Running`, etc.) raise change notifications via ReactiveUI's `RaiseAndSetIfChanged`.
+7. AXAML bindings (compiled, with `x:DataType`) update UI automatically.
+8. Settings persist to `%AppData%/Scada.Client/settings.json` (JSON serialization): connection config + **active tags only** + mnemoscheme elements.
 
 **Key decisions**:
 - FluentModbus over NModbus4 for .NET 8 compatibility (NModbus4 targets .NET Framework).
@@ -39,6 +40,8 @@ Scada.Client/
 - Namespace-per-folder: `Scada.Client.Views`, `Scada.Client.ViewModels`, etc.
 - Tag definitions with scaling/offset for flexible industrial data mapping.
 - Block reads: batch-read contiguous register ranges to minimize Modbus transactions.
+- **Active tags optimization**: only user-selected tags from `TagsEditorWindow` are saved and polled, preventing errors on non-existent registers.
+- **Automatic reconnection**: on "protocol identifier is invalid" error, auto-reconnect after 1 sec delay.
 - No DI container yet—services instantiated directly in ViewModels.
 
 ## Build / Test / Run workflows
@@ -188,8 +191,21 @@ public bool IsRunning
 - Dynamic button command: `ReactiveCommand.CreateFromTask(async () => await vm.WriteCoilAsync(address, value))`.
 - Pattern supports both CoilButton and ImageButton types, preserving tag selection and visual style.
 
+**Active Tags Editor pattern** (see `TagsEditorWindow`, `TagsEditorWindowViewModel`):
+- **Two-panel interface**: Available tags (from `tags.json`) | Active tags (saved to `settings.json`)
+- **Search functionality**: `SearchTagsAsync()` filters by name or address from full 35,421 tags database
+- **Range addition**: `AddTagsByRangeAsync()` parses format `Y0-Y50`, `M100-M200` and adds all tags in range
+- **Tag transfer**: `AddTagFromAvailable()` moves tag from available to active list (creates copy with Enabled=true)
+- **Tag removal**: `DeleteTag()` removes from active and returns to available
+- **Validation**: `TryParseTagName()` extracts prefix and number, validates range format
+- **Active tags only**: only right-panel tags saved to `settings.json` and polled by MainWindowViewModel
+- **Opening editor**: MainWindow creates `TagsConfigService` instance, passes to ViewModel constructor
+- **Saving changes**: `editorVm.ActiveTags` copied to `mainVm.ConnectionConfig.Tags` on dialog close with result=true
+
 ## Notes for agents
 
 - Always run `dotnet build` after file edits to catch errors early.
 - When adding Modbus operations, remember FluentModbus returns `Span<byte>`, not `ushort[]`.
+- **Active tags concept**: users select specific tags via `TagsEditorWindow`, only those are polled (performance optimization).
+- **Tag range syntax**: `<Prefix><Start>-<Prefix><End>` (e.g., `Y0-Y50`), validated by prefix match and start≤end.
 - Update this file when new patterns emerge (DI container, config file, logging, etc.).

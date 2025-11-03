@@ -13,6 +13,7 @@ public interface IModbusClientService
     Task<ushort[]> ReadHoldingRegistersAsync(ushort startAddress, ushort count);
     Task<ushort[]> ReadInputRegistersAsync(ushort startAddress, ushort count);
     Task<bool[]> ReadCoilsAsync(ushort startAddress, ushort count);
+    Task<bool[]> ReadDiscreteInputsAsync(ushort startAddress, ushort count);
     Task<bool> ReadCoilAsync(ushort address);
     Task WriteHoldingRegisterAsync(ushort address, ushort value);
     Task WriteCoilAsync(ushort address, bool value);

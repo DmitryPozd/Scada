@@ -50,6 +50,7 @@ public partial class CoilButton : UserControl
 
     public event EventHandler<CoilButtonInfo>? CopyRequested;
     public event EventHandler? PasteRequested;
+    public event EventHandler? TagChanged; // Новое событие для уведомления об изменении тега
 
     public bool IsActive
     {
@@ -121,6 +122,8 @@ public partial class CoilButton : UserControl
             if (tag != null && tag.Register == RegisterType.Coils)
             {
                 CoilAddress = tag.Address;
+                // Уведомляем об изменении тега для сохранения настроек
+                TagChanged?.Invoke(this, EventArgs.Empty);
             }
         });
     }
@@ -414,16 +417,49 @@ public partial class CoilButton : UserControl
 
     private void ShowTagSelectionInDialog(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput)
     {
+        // Проверяем наличие тегов
+        if (AvailableTags == null || !AvailableTags.Any())
+        {
+            var errorLabel = new TextBlock 
+            { 
+                Text = "Нет доступных тегов!\nТеги не загружены из settings.json.",
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = Brushes.Red,
+                Margin = new Thickness(0, 10, 0, 10)
+            };
+            stack.Children.Add(errorLabel);
+            
+            var closeButton = new Button { Content = "OK", Width = 80 };
+            closeButton.Click += (s, e) => dialog.Close();
+            stack.Children.Add(closeButton);
+            return;
+        }
+
         var label = new TextBlock 
         { 
-            Text = $"Кнопка: {Label}\nТекущий адрес: {CoilAddress}\nВыберите тег Coil:",
+            Text = $"Кнопка: {Label}\nТекущий адрес: {CoilAddress}\nВыберите тег M (Modbus Coils):",
             TextWrapping = TextWrapping.Wrap
         };
 
-        // Фильтруем только Coil теги
+        // Фильтруем только теги M (Modbus Coils)
         var coilTags = new ObservableCollection<TagDefinition>(
-            AvailableTags!.Where(t => t.Register == RegisterType.Coils)
+            AvailableTags.Where(t => t.Register == RegisterType.Coils && t.Name.StartsWith("M"))
         );
+
+        Console.WriteLine($"AvailableTags count: {AvailableTags.Count}");
+        Console.WriteLine($"M tags count: {coilTags.Count}");
+
+        if (coilTags.Count == 0)
+        {
+            var warningLabel = new TextBlock 
+            { 
+                Text = $"Нет M тегов!\nВсего тегов: {AvailableTags.Count}\nФильтруется по тегам M (Modbus Coils)",
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = Brushes.Orange,
+                Margin = new Thickness(0, 10, 0, 10)
+            };
+            stack.Children.Add(warningLabel);
+        }
 
         var combo = new ComboBox
         {

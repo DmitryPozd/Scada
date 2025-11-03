@@ -42,6 +42,8 @@ public partial class MainWindow : Window
             {
                 System.Diagnostics.Debug.WriteLine("SettingsLoadedEvent fired, calling RestoreMnemoschemeElements");
                 RestoreMnemoschemeElements();
+                // Обновляем теги для всех существующих кнопок
+                UpdateButtonAvailableTags(vm);
             };
             
             // Если настройки уже загружены (синхронный путь)
@@ -49,6 +51,8 @@ public partial class MainWindow : Window
             {
                 System.Diagnostics.Debug.WriteLine("Settings already loaded, calling RestoreMnemoschemeElements immediately");
                 RestoreMnemoschemeElements();
+                // Обновляем теги для всех существующих кнопок
+                UpdateButtonAvailableTags(vm);
             }
         }
         else
@@ -161,7 +165,7 @@ public partial class MainWindow : Window
                     {
                         Label = coilElem.Label,
                         CoilAddress = coilElem.CoilAddress,
-                        AvailableTags = vm.ConnectionConfig.Tags,
+                        AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags),
                         IconPathOn = coilElem.IconPathOn,
                         IconPathOff = coilElem.IconPathOff
                     };
@@ -181,6 +185,7 @@ public partial class MainWindow : Window
                     });
                     coilBtn.CopyRequested += OnButtonCopyRequested;
                     coilBtn.PasteRequested += OnButtonPasteRequested;
+                    coilBtn.TagChanged += OnButtonTagChanged; // Подписка на изменение тега
                     control = coilBtn;
                     break;
                 case CoilElement momentaryElem when momentaryElem.Type == ElementType.CoilMomentaryButton:
@@ -188,7 +193,7 @@ public partial class MainWindow : Window
                     {
                         Label = momentaryElem.Label,
                         CoilAddress = momentaryElem.CoilAddress,
-                        AvailableTags = vm.ConnectionConfig.Tags,
+                        AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags),
                         IconPathOn = momentaryElem.IconPathOn,
                         IconPathOff = momentaryElem.IconPathOff
                     };
@@ -208,6 +213,7 @@ public partial class MainWindow : Window
                     });
                     momentaryBtn.CopyRequested += OnButtonCopyRequested;
                     momentaryBtn.PasteRequested += OnButtonPasteRequested;
+                    momentaryBtn.TagChanged += OnButtonTagChanged; // Подписка на изменение тега
                     control = momentaryBtn;
                     break;
                 case CoilElement imgElem when imgElem.Type == ElementType.ImageButton:
@@ -218,7 +224,7 @@ public partial class MainWindow : Window
                             Label = imgElem.Label,
                             CoilAddress = imgElem.CoilAddress,
                             ImageType = imgType,
-                            AvailableTags = vm.ConnectionConfig.Tags,
+                            AvailableTags = GetFilteredTagsForImageButton(vm.ConnectionConfig.Tags),
                             IconPathOn = imgElem.IconPathOn,
                             IconPathOff = imgElem.IconPathOff
                         };
@@ -238,6 +244,7 @@ public partial class MainWindow : Window
                         });
                         imgBtn.CopyRequested += OnButtonCopyRequested;
                         imgBtn.PasteRequested += OnButtonPasteRequested;
+                        imgBtn.TagChanged += OnButtonTagChanged; // Подписка на изменение тега
                         control = imgBtn;
                     }
                     break;
@@ -323,7 +330,7 @@ public partial class MainWindow : Window
                 Label = newLabel,
                 CoilAddress = info.CoilAddress,
                 ImageType = imgType,
-                AvailableTags = vm.ConnectionConfig.Tags
+                AvailableTags = GetFilteredTagsForImageButton(vm.ConnectionConfig.Tags)
             };
             newButton.OnCommand = ReactiveCommand.CreateFromTask(async () =>
             {
@@ -337,6 +344,7 @@ public partial class MainWindow : Window
             });
             newButton.CopyRequested += OnButtonCopyRequested;
             newButton.PasteRequested += OnButtonPasteRequested;
+            newButton.TagChanged += OnButtonTagChanged; // Подписка на изменение тега
             buttonControl = newButton;
         }
         else if (info.IsMomentary)
@@ -345,7 +353,7 @@ public partial class MainWindow : Window
             {
                 Label = newLabel,
                 CoilAddress = info.CoilAddress,
-                AvailableTags = vm.ConnectionConfig.Tags
+                AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags)
             };
             newButton.OnCommand = ReactiveCommand.CreateFromTask(async () =>
             {
@@ -367,7 +375,7 @@ public partial class MainWindow : Window
             {
                 Label = newLabel,
                 CoilAddress = info.CoilAddress,
-                AvailableTags = vm.ConnectionConfig.Tags
+                AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags)
             };
             newButton.OnCommand = ReactiveCommand.CreateFromTask(async () =>
             {
@@ -381,6 +389,7 @@ public partial class MainWindow : Window
             });
             newButton.CopyRequested += OnButtonCopyRequested;
             newButton.PasteRequested += OnButtonPasteRequested;
+            newButton.TagChanged += OnButtonTagChanged; // Подписка на изменение тега
             buttonControl = newButton;
         }
         var draggable = new DraggableControl
@@ -445,7 +454,9 @@ public partial class MainWindow : Window
             })
         );
 
-        var editorVm = new TagsEditorWindowViewModel(tagsCopy);
+        // Создаём TagsConfigService для доступа к полному списку тэгов
+        var tagsService = new Services.TagsConfigService();
+        var editorVm = new TagsEditorWindowViewModel(tagsCopy, tagsService);
         var editorWindow = new TagsEditorWindow { DataContext = editorVm };
         var result = await editorWindow.ShowDialog<bool>(this);
 
@@ -453,7 +464,7 @@ public partial class MainWindow : Window
         {
             // Сохраняем изменённые теги обратно в конфигурацию
             mainVm.ConnectionConfig.Tags.Clear();
-            foreach (var tag in tagsCopy)
+            foreach (var tag in editorVm.ActiveTags)
             {
                 mainVm.ConnectionConfig.Tags.Add(tag);
             }
@@ -472,27 +483,20 @@ public partial class MainWindow : Window
             {
                 if (child is CoilButton coilBtn)
                 {
-                    coilBtn.AvailableTags = new ObservableCollection<TagDefinition>(
-                        vm.ConnectionConfig.Tags.Where(t => t.Register == RegisterType.Coils && t.Enabled)
-                    );
+                    coilBtn.AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags);
                 }
                 else if (child is CoilReadButton readBtn)
                 {
-                    readBtn.AvailableTags = new ObservableCollection<TagDefinition>(
-                        vm.ConnectionConfig.Tags.Where(t => t.Register == RegisterType.Coils && t.Enabled)
-                    );
+                    readBtn.AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags);
                 }
                 else if (child is CoilMomentaryButton momentaryBtn)
                 {
-                    momentaryBtn.AvailableTags = new ObservableCollection<TagDefinition>(
-                        vm.ConnectionConfig.Tags.Where(t => t.Register == RegisterType.Coils && t.Enabled)
-                    );
+                    momentaryBtn.AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags);
                 }
                 else if (child is ImageButton imgBtn)
                 {
-                    imgBtn.AvailableTags = new ObservableCollection<TagDefinition>(
-                        vm.ConnectionConfig.Tags.Where(t => t.Register == RegisterType.Coils && t.Enabled)
-                    );
+                    // ImageButton - только X (Input) и Y (Coils)
+                    imgBtn.AvailableTags = GetFilteredTagsForImageButton(vm.ConnectionConfig.Tags);
                 }
             }
         }
@@ -510,7 +514,7 @@ public partial class MainWindow : Window
                 if (draggable.Content is CoilButton coilBtn)
                 {
                     var selectedTagName = coilBtn.SelectedTag?.Name;
-                    coilBtn.AvailableTags = vm.ConnectionConfig.Tags;
+                    coilBtn.AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags);
                     // Восстанавливаем выбранный тег по имени
                     if (!string.IsNullOrEmpty(selectedTagName))
                     {
@@ -520,7 +524,7 @@ public partial class MainWindow : Window
                 else if (draggable.Content is CoilMomentaryButton momentaryBtn)
                 {
                     var selectedTagName = momentaryBtn.SelectedTag?.Name;
-                    momentaryBtn.AvailableTags = vm.ConnectionConfig.Tags;
+                    momentaryBtn.AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags);
                     // Восстанавливаем выбранный тег по имени
                     if (!string.IsNullOrEmpty(selectedTagName))
                     {
@@ -530,7 +534,7 @@ public partial class MainWindow : Window
                 else if (draggable.Content is ImageButton imgBtn)
                 {
                     var selectedTagName = imgBtn.SelectedTag?.Name;
-                    imgBtn.AvailableTags = vm.ConnectionConfig.Tags;
+                    imgBtn.AvailableTags = GetFilteredTagsForImageButton(vm.ConnectionConfig.Tags);
                     // Восстанавливаем выбранный тег по имени
                     if (!string.IsNullOrEmpty(selectedTagName))
                     {
@@ -541,12 +545,23 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+    private async void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
         if (DataContext is MainWindowViewModel vm)
         {
             CollectMnemoschemeElements(vm);
             await vm.SaveConfigurationAsync();
+        }
+    }
+
+    private async void OnButtonTagChanged(object? sender, EventArgs e)
+    {
+        // Автосохранение при изменении тега кнопки
+        if (DataContext is MainWindowViewModel vm)
+        {
+            CollectMnemoschemeElements(vm);
+            await vm.SaveConfigurationAsync();
+            System.Diagnostics.Debug.WriteLine("Tag changed - settings auto-saved");
         }
     }
 
@@ -650,5 +665,23 @@ public partial class MainWindow : Window
                 vm.ConnectionConfig.MnemoschemeElements.Add(mnemoElement);
             }
         }
+    }
+
+    // Вспомогательные методы для фильтрации тэгов
+    private ObservableCollection<TagDefinition> GetFilteredTagsForCoilButton(ObservableCollection<TagDefinition> allTags)
+    {
+        return new ObservableCollection<TagDefinition>(
+            allTags.Where(t => t.Register == RegisterType.Coils && t.Name.StartsWith("M") && t.Enabled)
+        );
+    }
+
+    private ObservableCollection<TagDefinition> GetFilteredTagsForImageButton(ObservableCollection<TagDefinition> allTags)
+    {
+        return new ObservableCollection<TagDefinition>(
+            allTags.Where(t => 
+                ((t.Register == RegisterType.Input && t.Name.StartsWith("X")) ||
+                 (t.Register == RegisterType.Coils && t.Name.StartsWith("Y"))) && 
+                t.Enabled)
+        );
     }
 }

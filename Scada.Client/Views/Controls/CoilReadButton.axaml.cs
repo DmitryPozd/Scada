@@ -105,7 +105,7 @@ public partial class CoilReadButton : UserControl
 
     private async void ShowTagSelectionDialog()
     {
-        var tags = AvailableTags?.Where(t => t.Register == RegisterType.Coils)?.ToList();
+        var tags = AvailableTags?.Where(t => t.Register == RegisterType.Input || t.Register == RegisterType.Coils)?.ToList();
         
         if (tags == null || !tags.Any())
         {

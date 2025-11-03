@@ -50,6 +50,7 @@ public partial class CoilMomentaryButton : UserControl
 
     public event EventHandler<CoilButtonInfo>? CopyRequested;
     public event EventHandler? PasteRequested;
+    public event EventHandler? TagChanged; // Новое событие для уведомления об изменении тега
 
     public bool IsActive
     {
@@ -115,6 +116,8 @@ public partial class CoilMomentaryButton : UserControl
             if (tag != null && tag.Register == RegisterType.Coils)
             {
                 CoilAddress = tag.Address;
+                // Уведомляем об изменении тега для сохранения настроек
+                TagChanged?.Invoke(this, EventArgs.Empty);
             }
         });
     }

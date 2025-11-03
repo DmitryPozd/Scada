@@ -60,6 +60,7 @@ public partial class ImageButton : UserControl
 
     public event EventHandler<CoilButtonInfo>? CopyRequested;
     public event EventHandler? PasteRequested;
+    public event EventHandler? TagChanged; // Новое событие для уведомления об изменении тега
 
     public bool IsActive
     {
@@ -128,9 +129,11 @@ public partial class ImageButton : UserControl
         // Subscribe to SelectedTag changes to update CoilAddress
         this.GetObservable(SelectedTagProperty).Subscribe(tag =>
         {
-            if (tag != null && tag.Register == RegisterType.Coils)
+            if (tag != null && (tag.Register == RegisterType.Coils || tag.Register == RegisterType.Input))
             {
                 CoilAddress = tag.Address;
+                // Уведомляем об изменении тега для сохранения настроек
+                TagChanged?.Invoke(this, EventArgs.Empty);
             }
         });
     }
@@ -369,14 +372,32 @@ public partial class ImageButton : UserControl
     {
         var label = new TextBlock 
         { 
-            Text = $"Устройство: {Label}\nТекущий адрес: {CoilAddress}\nВыберите тег Coil:",
+            Text = $"Устройство: {Label}\nТекущий адрес: {CoilAddress}\nВыберите тег X или Y:",
             TextWrapping = TextWrapping.Wrap
         };
 
-        // Фильтруем только Coil теги
-        var coilTags = new ObservableCollection<TagDefinition>(
-            AvailableTags!.Where(t => t.Register == RegisterType.Coils)
+        // Фильтруем только теги X (Input) и Y (Coils)
+        var bitTags = new ObservableCollection<TagDefinition>(
+            AvailableTags!.Where(t => 
+                (t.Register == RegisterType.Input && t.Name.StartsWith("X")) ||
+                (t.Register == RegisterType.Coils && t.Name.StartsWith("Y"))
+            )
         );
+
+        Console.WriteLine($"AvailableTags count: {AvailableTags?.Count ?? 0}");
+        Console.WriteLine($"X/Y tags count: {bitTags.Count}");
+
+        if (bitTags.Count == 0)
+        {
+            var warningLabel = new TextBlock 
+            { 
+                Text = $"Нет X/Y тегов!\nВсего тегов: {AvailableTags?.Count ?? 0}\nФильтруется по тегам X (Input) и Y (Coils)",
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = Brushes.Orange,
+                Margin = new Thickness(0, 10, 0, 10)
+            };
+            stack.Children.Add(warningLabel);
+        }
 
         var combo = new ComboBox
         {
@@ -384,7 +405,7 @@ public partial class ImageButton : UserControl
         };
 
         // Добавляем элементы с отображаемым текстом
-        foreach (var tag in coilTags)
+        foreach (var tag in bitTags)
         {
             combo.Items.Add(new ComboBoxItem 
             { 
@@ -392,7 +413,7 @@ public partial class ImageButton : UserControl
                 Tag = tag
             });
         }
-        combo.SelectedIndex = coilTags.ToList().FindIndex(t => t.Address == CoilAddress);
+        combo.SelectedIndex = bitTags.ToList().FindIndex(t => t.Address == CoilAddress);
 
         var buttons = new StackPanel 
         { 

@@ -113,6 +113,25 @@ public class ModbusClientService : IModbusClientService, IDisposable
         });
     }
 
+    public async Task<bool[]> ReadDiscreteInputsAsync(ushort startAddress, ushort count)
+    {
+        if (_client == null || !_client.IsConnected)
+            throw new InvalidOperationException("Modbus client is not connected.");
+
+        return await Task.Run(() =>
+        {
+            var bytes = _client.ReadDiscreteInputs(_unitId, startAddress, count);
+            var result = new bool[count];
+            for (int i = 0; i < count; i++)
+            {
+                byte b = bytes[i / 8];
+                int bit = i % 8;
+                result[i] = (b & (1 << bit)) != 0;
+            }
+            return result;
+        });
+    }
+
     public async Task<bool> ReadCoilAsync(ushort address)
     {
         if (_client == null || !_client.IsConnected)
