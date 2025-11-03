@@ -79,11 +79,11 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Canvas for Mnemoscheme -->
-                <Canvas x:Name="MnemoCanvas" 
-                        Grid.Row="1" 
-                        Background="{DynamicResource LayerFillColorDefaultBrush}" 
-                        ClipToBounds="True">
+                <!-- Canvas for Mnemoscheme with overlay for right-click detection -->
+                <Grid Grid.Row="1">
+                    <Canvas x:Name="MnemoCanvas" 
+                            Background="{DynamicResource LayerFillColorDefaultBrush}" 
+                            ClipToBounds="True">
                     
                     <!-- Pump Control -->
                     <controls:DraggableControl X="50" Y="50">
@@ -191,11 +191,18 @@
                     </controls:DraggableControl>
 
                 </Canvas>
+                
+                    <!-- Прозрачный оверлей для перехвата правого клика (НЕ блокирует события дочерних элементов) -->
+                    <Border x:Name="CanvasOverlay" 
+                            Background="Transparent"
+                            IsHitTestVisible="False"/>
+                </Grid>
             </Grid>
         </Border>
 
         <!-- Bottom Action Bar -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0" Spacing="10">
+            <Button Content="Добавить элемент" Click="OnAddElementButtonClick" Padding="15,5"/>
             <Button Content="Редактор тегов" Command="{Binding OpenTagsEditorCommand}" Padding="15,5"/>
             <Button Content="Настройки" Command="{Binding OpenSettingsCommand}" Padding="15,5"/>
         </StackPanel>

@@ -1,9 +1,46 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Media;
+using System;
+using System.Globalization;
 
 namespace Scada.Client.Views.Controls;
+
+public class ValveAlarmStrokeBrushConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool hasAlarm && hasAlarm)
+        {
+            return Brushes.Red;
+        }
+        return new SolidColorBrush(Color.Parse("#9CA3AF"));
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+public class ValveAlarmStrokeThicknessConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool hasAlarm && hasAlarm)
+        {
+            return new Thickness(3);
+        }
+        return new Thickness(1);
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
 
 public partial class ValveControl : UserControl
 {

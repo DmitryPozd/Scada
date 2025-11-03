@@ -4,6 +4,9 @@ using System.Reactive.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Scada.Client.ViewModels;
 using Scada.Client.Models;
@@ -22,14 +25,76 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        
+        System.Diagnostics.Debug.WriteLine("*** MainWindow constructor called ***");
+        
         DataContextChanged += OnDataContextChanged;
         Loaded += OnWindowLoaded;
+        
+        // Дополнительная подписка на AttachedToVisualTree для гарантированной инициализации
+        this.AttachedToVisualTree += OnAttachedToVisualTree;
+        
         Closing += OnWindowClosing;
     }
 
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        System.Diagnostics.Debug.WriteLine("*** OnAttachedToVisualTree called ***");
+        
+        // Устанавливаем центр Canvas для создания элементов по умолчанию
+        var canvas = this.Find<Canvas>("MnemoCanvas");
+        if (canvas != null)
+        {
+            _lastCanvasClickPosition = new Point(400, 300); // Центр по умолчанию
+        }
+    }
+
+    private async void OnAddElementButtonClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        System.Diagnostics.Debug.WriteLine("*** OnAddElementButtonClick called ***");
+        
+        // Устанавливаем позицию в центре Canvas
+        var canvas = this.Find<Canvas>("MnemoCanvas");
+        if (canvas != null)
+        {
+            _lastCanvasClickPosition = new Point(
+                canvas.Bounds.Width / 2 - 50, 
+                canvas.Bounds.Height / 2 - 50
+            );
+        }
+        
+        await ShowCanvasContextMenuAsync();
+    }
+
+    private Point? _rightClickPosition;
+
     private void OnWindowLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        System.Diagnostics.Debug.WriteLine("*** OnWindowLoaded called ***");
+        
         SubscribeToButtonEvents(this);
+        
+        // Добавляем обработчик правого клика на Canvas программно для надёжности
+        var canvas = this.Find<Canvas>("MnemoCanvas");
+        System.Diagnostics.Debug.WriteLine($"*** Canvas search result: {(canvas != null ? "FOUND" : "NOT FOUND")} ***");
+        
+        if (canvas != null)
+        {
+            System.Diagnostics.Debug.WriteLine("*** Canvas found, adding PointerReleased handler ***");
+            // Дополнительная подписка через AddHandler для перехвата событий
+            canvas.AddHandler(PointerReleasedEvent, OnCanvasPointerReleased, handledEventsToo: true);
+            
+            // Дополнительно подписываемся на PointerPressed для отладки
+            canvas.AddHandler(PointerPressedEvent, (s, args) =>
+            {
+                var point = args.GetCurrentPoint(this);
+                System.Diagnostics.Debug.WriteLine($"*** Canvas PointerPressed: Button={args.GetCurrentPoint(this).Properties.IsRightButtonPressed}, UpdateKind={point.Properties.PointerUpdateKind} ***");
+            }, handledEventsToo: true);
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("*** ERROR: Canvas NOT found! ***");
+        }
         
         // Подписываемся на событие завершения загрузки настроек
         if (DataContext is MainWindowViewModel vm)
@@ -185,6 +250,7 @@ public partial class MainWindow : Window
                     });
                     coilBtn.CopyRequested += OnButtonCopyRequested;
                     coilBtn.PasteRequested += OnButtonPasteRequested;
+                    coilBtn.DeleteRequested += OnButtonDeleteRequested;
                     coilBtn.TagChanged += OnButtonTagChanged; // Подписка на изменение тега
                     control = coilBtn;
                     break;
@@ -213,6 +279,7 @@ public partial class MainWindow : Window
                     });
                     momentaryBtn.CopyRequested += OnButtonCopyRequested;
                     momentaryBtn.PasteRequested += OnButtonPasteRequested;
+                    momentaryBtn.DeleteRequested += OnButtonDeleteRequested;
                     momentaryBtn.TagChanged += OnButtonTagChanged; // Подписка на изменение тега
                     control = momentaryBtn;
                     break;
@@ -244,6 +311,7 @@ public partial class MainWindow : Window
                         });
                         imgBtn.CopyRequested += OnButtonCopyRequested;
                         imgBtn.PasteRequested += OnButtonPasteRequested;
+                        imgBtn.DeleteRequested += OnButtonDeleteRequested;
                         imgBtn.TagChanged += OnButtonTagChanged; // Подписка на изменение тега
                         control = imgBtn;
                     }
@@ -285,16 +353,19 @@ public partial class MainWindow : Window
             {
                 coilBtn.CopyRequested += OnButtonCopyRequested;
                 coilBtn.PasteRequested += OnButtonPasteRequested;
+                coilBtn.DeleteRequested += OnButtonDeleteRequested;
             }
             else if (child is CoilMomentaryButton momentaryBtn)
             {
                 momentaryBtn.CopyRequested += OnButtonCopyRequested;
                 momentaryBtn.PasteRequested += OnButtonPasteRequested;
+                momentaryBtn.DeleteRequested += OnButtonDeleteRequested;
             }
             else if (child is ImageButton imgBtn)
             {
                 imgBtn.CopyRequested += OnButtonCopyRequested;
                 imgBtn.PasteRequested += OnButtonPasteRequested;
+                imgBtn.DeleteRequested += OnButtonDeleteRequested;
             }
         }
     }
@@ -312,6 +383,32 @@ public partial class MainWindow : Window
     {
         if (_copiedButtonInfo == null) return;
         CreateDynamicButton(_copiedButtonInfo);
+    }
+
+    private async void OnButtonDeleteRequested(object? sender, EventArgs e)
+    {
+        // Находим родительский DraggableControl
+        if (sender is Control control)
+        {
+            var draggable = control.Parent as DraggableControl;
+            if (draggable != null)
+            {
+                var canvas = this.FindControl<Canvas>("MnemoCanvas");
+                if (canvas != null)
+                {
+                    // Удаляем элемент с Canvas
+                    canvas.Children.Remove(draggable);
+                    
+                    // Сохраняем изменения
+                    if (DataContext is MainWindowViewModel vm)
+                    {
+                        CollectMnemoschemeElements(vm);
+                        await vm.SaveConfigurationAsync();
+                        vm.ConnectionStatus = $"Элемент удалён";
+                    }
+                }
+            }
+        }
     }
 
     private void CreateDynamicButton(CoilButtonInfo info)
@@ -344,6 +441,7 @@ public partial class MainWindow : Window
             });
             newButton.CopyRequested += OnButtonCopyRequested;
             newButton.PasteRequested += OnButtonPasteRequested;
+            newButton.DeleteRequested += OnButtonDeleteRequested;
             newButton.TagChanged += OnButtonTagChanged; // Подписка на изменение тега
             buttonControl = newButton;
         }
@@ -367,6 +465,7 @@ public partial class MainWindow : Window
             });
             newButton.CopyRequested += OnButtonCopyRequested;
             newButton.PasteRequested += OnButtonPasteRequested;
+            newButton.DeleteRequested += OnButtonDeleteRequested;
             buttonControl = newButton;
         }
         else
@@ -389,6 +488,7 @@ public partial class MainWindow : Window
             });
             newButton.CopyRequested += OnButtonCopyRequested;
             newButton.PasteRequested += OnButtonPasteRequested;
+            newButton.DeleteRequested += OnButtonDeleteRequested;
             newButton.TagChanged += OnButtonTagChanged; // Подписка на изменение тега
             buttonControl = newButton;
         }
@@ -683,5 +783,276 @@ public partial class MainWindow : Window
                  (t.Register == RegisterType.Coils && t.Name.StartsWith("Y"))) && 
                 t.Enabled)
         );
+    }
+
+    private Point _lastCanvasClickPosition;
+
+    private async void OnCanvasPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        var point = e.GetCurrentPoint(this);
+        System.Diagnostics.Debug.WriteLine($"OnCanvasPointerReleased: InitialButton={e.InitialPressMouseButton}, UpdateKind={point.Properties.PointerUpdateKind}, Source={e.Source?.GetType().Name}");
+        
+        // Проверяем, что клик был правой кнопкой
+        if (e.InitialPressMouseButton != MouseButton.Right && 
+            point.Properties.PointerUpdateKind != PointerUpdateKind.RightButtonReleased)
+        {
+            System.Diagnostics.Debug.WriteLine("Not right button, ignoring");
+            return;
+        }
+
+        var canvas = sender as Canvas;
+        if (canvas == null)
+        {
+            System.Diagnostics.Debug.WriteLine("Sender is not Canvas");
+            return;
+        }
+
+        // УПРОЩЕННАЯ ЛОГИКА: ищем DraggableControl среди всех элементов под курсором
+        var clickPosition = e.GetPosition(canvas);
+        
+        // Проходим по всем DraggableControl на Canvas и проверяем, попал ли клик в их bounds
+        foreach (var child in canvas.Children)
+        {
+            if (child is DraggableControl draggable)
+            {
+                var childBounds = new Rect(draggable.Bounds.Size);
+                var childPosition = draggable.TranslatePoint(new Point(0, 0), canvas) ?? new Point(0, 0);
+                var absoluteBounds = new Rect(childPosition, draggable.Bounds.Size);
+                
+                if (absoluteBounds.Contains(clickPosition))
+                {
+                    System.Diagnostics.Debug.WriteLine($"Click is inside DraggableControl at {childPosition}, ignoring");
+                    return;
+                }
+            }
+        }
+
+        System.Diagnostics.Debug.WriteLine("Click on empty canvas area - showing context menu!");
+        
+        // Запоминаем позицию клика для создания элемента
+        _lastCanvasClickPosition = clickPosition;
+
+        // Показываем контекстное меню
+        await ShowCanvasContextMenuAsync();
+        e.Handled = true;
+    }
+
+    private async System.Threading.Tasks.Task ShowCanvasContextMenuAsync()
+    {
+        var dialog = new Window
+        {
+            Title = "Добавить элемент управления",
+            Width = 450,
+            Height = 400,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        var stack = new StackPanel { Margin = new Thickness(20), Spacing = 15 };
+
+        var headerText = new TextBlock
+        {
+            Text = "Выберите тип элемента для добавления:",
+            FontWeight = Avalonia.Media.FontWeight.SemiBold,
+            FontSize = 14,
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+        stack.Children.Add(headerText);
+
+        // Создаём кнопки для каждого типа элемента
+        var coilButtonBtn = CreateMenuButton("🔘 Кнопка Coil (с фиксацией)", "Управление выходом с фиксацией состояния");
+        coilButtonBtn.Click += (s, e) =>
+        {
+            CreateElementAtLastPosition(ElementType.CoilButton);
+            dialog.Close();
+        };
+
+        var momentaryButtonBtn = CreateMenuButton("⏺️ Кнопка Momentary (без фиксации)", "Кнопка, активная только при удержании");
+        momentaryButtonBtn.Click += (s, e) =>
+        {
+            CreateElementAtLastPosition(ElementType.CoilMomentaryButton);
+            dialog.Close();
+        };
+
+        var imageMotorBtn = CreateMenuButton("⚙️ Мотор (ImageButton)", "Графический элемент управления мотором");
+        imageMotorBtn.Click += (s, e) =>
+        {
+            CreateElementAtLastPosition(ElementType.ImageButton, ImageButtonType.Motor);
+            dialog.Close();
+        };
+
+        var imageValveBtn = CreateMenuButton("🔧 Клапан (ImageButton)", "Графический элемент управления клапаном");
+        imageValveBtn.Click += (s, e) =>
+        {
+            CreateElementAtLastPosition(ElementType.ImageButton, ImageButtonType.Valve);
+            dialog.Close();
+        };
+
+        var imageFanBtn = CreateMenuButton("🌀 Вентилятор (ImageButton)", "Графический элемент управления вентилятором");
+        imageFanBtn.Click += (s, e) =>
+        {
+            CreateElementAtLastPosition(ElementType.ImageButton, ImageButtonType.Fan);
+            dialog.Close();
+        };
+
+        stack.Children.Add(coilButtonBtn);
+        stack.Children.Add(momentaryButtonBtn);
+        stack.Children.Add(imageMotorBtn);
+        stack.Children.Add(imageValveBtn);
+        stack.Children.Add(imageFanBtn);
+
+        var cancelBtn = new Button
+        {
+            Content = "❌ Отмена",
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+            Padding = new Thickness(20, 8),
+            Margin = new Thickness(0, 10, 0, 0)
+        };
+        cancelBtn.Click += (s, e) => dialog.Close();
+        stack.Children.Add(cancelBtn);
+
+        dialog.Content = stack;
+
+        if (this.IsVisible)
+        {
+            await dialog.ShowDialog(this);
+        }
+    }
+
+    private Button CreateMenuButton(string title, string description)
+    {
+        var button = new Button
+        {
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+            Padding = new Thickness(15, 10)
+        };
+
+        var panel = new StackPanel { Spacing = 3 };
+        var titleText = new TextBlock
+        {
+            Text = title,
+            FontWeight = Avalonia.Media.FontWeight.SemiBold,
+            FontSize = 13
+        };
+        var descText = new TextBlock
+        {
+            Text = description,
+            FontSize = 11,
+            Foreground = Avalonia.Media.Brushes.Gray
+        };
+
+        panel.Children.Add(titleText);
+        panel.Children.Add(descText);
+        button.Content = panel;
+
+        return button;
+    }
+
+    private async void CreateElementAtLastPosition(ElementType elementType, ImageButtonType? imageType = null)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+            return;
+
+        var canvas = this.FindControl<Canvas>("MnemoCanvas");
+        if (canvas == null)
+            return;
+
+        Control control;
+        var x = _lastCanvasClickPosition.X;
+        var y = _lastCanvasClickPosition.Y;
+
+        switch (elementType)
+        {
+            case ElementType.CoilButton:
+                var coilBtn = new CoilButton
+                {
+                    Label = $"Кнопка {_dynamicButtonCounter++}",
+                    CoilAddress = 0,
+                    AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags)
+                };
+                coilBtn.OnCommand = ReactiveCommand.CreateFromTask(async () =>
+                {
+                    await vm.WriteCoilAsync(coilBtn.CoilAddress, true);
+                    coilBtn.IsActive = true;
+                });
+                coilBtn.OffCommand = ReactiveCommand.CreateFromTask(async () =>
+                {
+                    await vm.WriteCoilAsync(coilBtn.CoilAddress, false);
+                    coilBtn.IsActive = false;
+                });
+                coilBtn.CopyRequested += OnButtonCopyRequested;
+                coilBtn.PasteRequested += OnButtonPasteRequested;
+                coilBtn.DeleteRequested += OnButtonDeleteRequested;
+                coilBtn.TagChanged += OnButtonTagChanged;
+                control = coilBtn;
+                break;
+
+            case ElementType.CoilMomentaryButton:
+                var momentaryBtn = new CoilMomentaryButton
+                {
+                    Label = $"Момент. кнопка {_dynamicButtonCounter++}",
+                    CoilAddress = 0,
+                    AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags)
+                };
+                momentaryBtn.OnCommand = ReactiveCommand.CreateFromTask(async () =>
+                {
+                    await vm.WriteCoilAsync(momentaryBtn.CoilAddress, true);
+                    momentaryBtn.IsActive = true;
+                });
+                momentaryBtn.OffCommand = ReactiveCommand.CreateFromTask(async () =>
+                {
+                    await vm.WriteCoilAsync(momentaryBtn.CoilAddress, false);
+                    momentaryBtn.IsActive = false;
+                });
+                momentaryBtn.CopyRequested += OnButtonCopyRequested;
+                momentaryBtn.PasteRequested += OnButtonPasteRequested;
+                momentaryBtn.DeleteRequested += OnButtonDeleteRequested;
+                momentaryBtn.TagChanged += OnButtonTagChanged;
+                control = momentaryBtn;
+                break;
+
+            case ElementType.ImageButton when imageType.HasValue:
+                var imgBtn = new ImageButton
+                {
+                    Label = $"{imageType} {_dynamicButtonCounter++}",
+                    CoilAddress = 0,
+                    ImageType = imageType.Value,
+                    AvailableTags = GetFilteredTagsForImageButton(vm.ConnectionConfig.Tags)
+                };
+                imgBtn.OnCommand = ReactiveCommand.CreateFromTask(async () =>
+                {
+                    await vm.WriteCoilAsync(imgBtn.CoilAddress, true);
+                    imgBtn.IsActive = true;
+                });
+                imgBtn.OffCommand = ReactiveCommand.CreateFromTask(async () =>
+                {
+                    await vm.WriteCoilAsync(imgBtn.CoilAddress, false);
+                    imgBtn.IsActive = false;
+                });
+                imgBtn.CopyRequested += OnButtonCopyRequested;
+                imgBtn.PasteRequested += OnButtonPasteRequested;
+                imgBtn.DeleteRequested += OnButtonDeleteRequested;
+                imgBtn.TagChanged += OnButtonTagChanged;
+                control = imgBtn;
+                break;
+
+            default:
+                return;
+        }
+
+        var draggable = new DraggableControl
+        {
+            X = x,
+            Y = y,
+            Content = control
+        };
+
+        canvas.Children.Add(draggable);
+
+        // Сохраняем изменения
+        CollectMnemoschemeElements(vm);
+        await vm.SaveConfigurationAsync();
+        vm.ConnectionStatus = $"Добавлен элемент: {elementType}";
     }
 }

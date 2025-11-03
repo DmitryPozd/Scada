@@ -6,9 +6,22 @@
   <Border x:Name="Root" 
           CornerRadius="8" 
           Padding="8" 
-          Background="{DynamicResource ControlFillColorDefaultBrush}" 
-          BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
-          BorderThickness="1">
+          Background="{DynamicResource ControlFillColorDefaultBrush}">
+    <Border.BorderBrush>
+      <Binding Path="HasAlarm" RelativeSource="{RelativeSource AncestorType=self:ValveControl}">
+        <Binding.Converter>
+          <self:ValveAlarmStrokeBrushConverter/>
+        </Binding.Converter>
+      </Binding>
+    </Border.BorderBrush>
+    <Border.BorderThickness>
+      <Binding Path="HasAlarm" RelativeSource="{RelativeSource AncestorType=self:ValveControl}">
+        <Binding.Converter>
+          <self:ValveAlarmStrokeThicknessConverter/>
+        </Binding.Converter>
+      </Binding>
+    </Border.BorderThickness>
+    
     <StackPanel Spacing="8">
       <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=self:ValveControl}}"
                  FontWeight="Bold" HorizontalAlignment="Center"/>
@@ -19,19 +32,4 @@
                  Foreground="#6B7280" HorizontalAlignment="Center"/>
     </StackPanel>
   </Border>
-
-  <Border.BorderBrush>
-    <Binding Path="HasAlarm" RelativeSource="{RelativeSource AncestorType=self:ValveControl}">
-      <Binding.Converter>
-        <self:AlarmStrokeBrushConverter/>
-      </Binding.Converter>
-    </Binding>
-  </Border.BorderBrush>
-  <Border.BorderThickness>
-    <Binding Path="HasAlarm" RelativeSource="{RelativeSource AncestorType=self:ValveControl}">
-      <Binding.Converter>
-        <self:AlarmStrokeThicknessConverter/>
-      </Binding.Converter>
-    </Binding>
-  </Border.BorderThickness>
 </UserControl>

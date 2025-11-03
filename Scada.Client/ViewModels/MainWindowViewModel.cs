@@ -440,6 +440,7 @@ public class MainWindowViewModel : ViewModelBase
             await PollGroupAsync(enabled, RegisterType.Holding);
             await PollGroupAsync(enabled, RegisterType.Input);
             await PollGroupCoilsAsync(enabled);
+            await PollGroupDiscreteInputBitsAsync(enabled); // Чтение X-тегов (входные биты)
             // НЕ перезаписываем статус - оставляем сообщение из PollGroupCoilsAsync
         }
         catch (FluentModbus.ModbusException ex) when (ex.Message.Contains("protocol identifier"))
@@ -752,6 +753,53 @@ public class MainWindowViewModel : ViewModelBase
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"PollGroupDiscreteInputsAsync failed: {ex}");
+        }
+    }
+
+    private async Task PollGroupDiscreteInputBitsAsync(System.Collections.ObjectModel.ObservableCollection<TagDefinition> tags)
+    {
+        // Читаем теги X (входные биты) через Discrete Inputs (функция Modbus 0x02)
+        var xTags = tags.Where(t => t.Enabled && t.Register == RegisterType.Input && t.Type == DataType.Bool && t.Name.StartsWith("X")).OrderBy(t => t.Address).ToList();
+        
+        if (xTags.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var coilValues = new Dictionary<ushort, bool>();
+
+            // Читаем каждый X-тег ОТДЕЛЬНО через Discrete Inputs
+            foreach (var tag in xTags)
+            {
+                try
+                {
+                    var result = await _modbusService.ReadDiscreteInputsAsync(tag.Address, 1);
+                    bool bit = result[0];
+                    double val = bit ? 1.0 : 0.0;
+                    val = val * tag.Scale + tag.Offset;
+                    tag.Value = val;
+
+                    // Добавляем в словарь для обновления кнопок
+                    coilValues[tag.Address] = bit;
+                }
+                catch (Exception ex)
+                {
+                    // Тихо пропускаем ошибки
+                    System.Diagnostics.Debug.WriteLine($"Failed to read Discrete Input X at address {tag.Address}: {ex.Message}");
+                }
+            }
+
+            // Уведомляем подписчиков об обновлении X-тегов
+            if (CoilTagsUpdated != null && coilValues.Count > 0)
+            {
+                CoilTagsUpdated.Invoke(this, coilValues);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PollGroupDiscreteInputBitsAsync failed: {ex}");
         }
     }
 

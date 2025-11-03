@@ -50,6 +50,7 @@ public partial class CoilMomentaryButton : UserControl
 
     public event EventHandler<CoilButtonInfo>? CopyRequested;
     public event EventHandler? PasteRequested;
+    public event EventHandler? DeleteRequested; // Событие для удаления элемента
     public event EventHandler? TagChanged; // Новое событие для уведомления об изменении тега
 
     public bool IsActive
@@ -195,6 +196,12 @@ public partial class CoilMomentaryButton : UserControl
             PasteRequested?.Invoke(this, EventArgs.Empty);
             e.Handled = true;
         }
+        // Delete - удалить элемент
+        else if (e.Key == Key.Delete)
+        {
+            DeleteRequested?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
         // Пробел - нажатие кнопки (только если еще не активна)
         else if (e.Key == Key.Space && !IsActive)
         {
@@ -238,8 +245,8 @@ public partial class CoilMomentaryButton : UserControl
         var dialog = new Window
         {
             Title = "Настройки кнопки без фиксации",
-            Width = 500,
-            Height = 520,
+            Width = 600,
+            Height = 540,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };
@@ -353,31 +360,79 @@ public partial class CoilMomentaryButton : UserControl
         // Разделитель
         stack.Children.Add(new Separator { Margin = new Thickness(0, 5, 0, 5) });
 
-        // Кнопки копировать/вставить
-        var copyPastePanel = new StackPanel 
-        { 
-            Orientation = Avalonia.Layout.Orientation.Horizontal, 
-            Spacing = 10,
+        // Кнопки управления (в сетке 2x2 для красивого расположения)
+        var actionsGrid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,*"),
+            RowDefinitions = new RowDefinitions("Auto,Auto"),
             Margin = new Thickness(0, 0, 0, 10)
         };
 
-        var copyBtn = new Button { Content = "📋 Копировать (Ctrl+C)", Padding = new Thickness(10, 5) };
+        var copyBtn = new Button 
+        { 
+            Content = "📋 Копировать", 
+            Padding = new Thickness(10, 8),
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+            Margin = new Thickness(0, 0, 5, 5)
+        };
         copyBtn.Click += (s, e) =>
         {
             CopyButton();
             dialog.Close();
         };
 
-        var pasteBtn = new Button { Content = "📌 Вставить (Ctrl+V)", Padding = new Thickness(10, 5) };
+        var pasteBtn = new Button 
+        { 
+            Content = "📌 Вставить", 
+            Padding = new Thickness(10, 8),
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+            Margin = new Thickness(5, 0, 0, 5)
+        };
         pasteBtn.Click += (s, e) =>
         {
             PasteRequested?.Invoke(this, EventArgs.Empty);
             dialog.Close();
         };
 
-        copyPastePanel.Children.Add(copyBtn);
-        copyPastePanel.Children.Add(pasteBtn);
-        stack.Children.Add(copyPastePanel);
+        var deleteBtn = new Button 
+        { 
+            Content = "🗑️ Удалить", 
+            Padding = new Thickness(10, 8),
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+            Margin = new Thickness(0, 5, 5, 0)
+        };
+        deleteBtn.Click += (s, e) =>
+        {
+            DeleteRequested?.Invoke(this, EventArgs.Empty);
+            dialog.Close();
+        };
+
+        var hintText = new TextBlock
+        {
+            Text = "Горячие клавиши: Ctrl+C, Ctrl+V, Delete",
+            FontSize = 11,
+            Foreground = Brushes.Gray,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+            Margin = new Thickness(5, 5, 0, 0)
+        };
+
+        Grid.SetColumn(copyBtn, 0);
+        Grid.SetRow(copyBtn, 0);
+        Grid.SetColumn(pasteBtn, 1);
+        Grid.SetRow(pasteBtn, 0);
+        Grid.SetColumn(deleteBtn, 0);
+        Grid.SetRow(deleteBtn, 1);
+        Grid.SetColumn(hintText, 1);
+        Grid.SetRow(hintText, 1);
+
+        actionsGrid.Children.Add(copyBtn);
+        actionsGrid.Children.Add(pasteBtn);
+        actionsGrid.Children.Add(deleteBtn);
+        actionsGrid.Children.Add(hintText);
+        stack.Children.Add(actionsGrid);
 
         // Разделитель
         stack.Children.Add(new Separator());

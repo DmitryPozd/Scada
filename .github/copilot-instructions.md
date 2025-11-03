@@ -182,14 +182,15 @@ public bool IsRunning
 - Subscribe to `SelectedTagProperty` changes to auto-update `CoilAddress` when tag selected.
 
 **Copy/Paste pattern for button duplication** (see `CoilButton`, `ImageButton`, `MainWindow.axaml.cs`):
-- UserControls define `CopyRequested` and `PasteRequested` routed events (bubbling).
+- UserControls define `CopyRequested`, `PasteRequested`, and `DeleteRequested` routed events (bubbling).
 - `CoilButtonInfo` model carries: `Label`, `CoilAddress`, `TagName`, `IsImageButton`, `ImageType`.
 - **Ctrl+C on focused control**: raises `CopyRequested` event with CoilButtonInfo payload.
 - **MainWindow.axaml.cs** subscribes via `GetVisualDescendants<CoilButton/ImageButton>()` in constructor.
 - Clipboard storage: `_copiedButtonInfo` field stores last copied button data.
 - **Ctrl+V in window**: creates dynamic button in `DynamicButtonsPanel` WrapPanel.
+- **Delete on focused control**: raises `DeleteRequested` event, removes element from Canvas, auto-saves settings.
 - Dynamic button command: `ReactiveCommand.CreateFromTask(async () => await vm.WriteCoilAsync(address, value))`.
-- Pattern supports both CoilButton and ImageButton types, preserving tag selection and visual style.
+- Pattern supports CoilButton, ImageButton, and CoilMomentaryButton types, preserving tag selection and visual style.
 
 **Active Tags Editor pattern** (see `TagsEditorWindow`, `TagsEditorWindowViewModel`):
 - **Two-panel interface**: Available tags (from `tags.json`) | Active tags (saved to `settings.json`)
