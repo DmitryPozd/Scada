@@ -1010,9 +1010,20 @@ public class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            var errorMsg = ex.Message.Contains("allowable address") 
-                ? $"Адрес {address} недоступен на сервере." 
-                : ex.Message;
+            string errorMsg;
+            if (ex.Message.Contains("allowable address"))
+            {
+                errorMsg = $"Адрес {address} недоступен на сервере.";
+            }
+            else if (ex.Message.Contains("function code is invalid") || ex.Message.Contains("код функции"))
+            {
+                errorMsg = $"Адрес {address} не поддерживает запись катушки. Проверьте тип регистра.";
+            }
+            else
+            {
+                errorMsg = ex.Message;
+            }
+            
             ConnectionStatus = $"⚠ Ошибка записи: {errorMsg}";
             
             // Логируем для отладки

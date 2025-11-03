@@ -91,7 +91,17 @@ public class ModbusClientService : IModbusClientService, IDisposable
         if (_client == null || !_client.IsConnected)
             throw new InvalidOperationException("Modbus client is not connected.");
 
-        await Task.Run(() => _client.WriteSingleCoil(_unitId, address, value));
+        try
+        {
+            await Task.Run(() => _client.WriteSingleCoil(_unitId, address, value));
+        }
+        catch (FluentModbus.ModbusException ex)
+        {
+            throw new InvalidOperationException(
+                $"Ошибка записи катушки по адресу {address}: {ex.Message}. " +
+                $"Проверьте, что адрес существует на контроллере и поддерживает запись.", 
+                ex);
+        }
     }
 
     public async Task<bool[]> ReadCoilsAsync(ushort startAddress, ushort count)
