@@ -66,8 +66,6 @@ public partial class MainWindow : Window
         await ShowCanvasContextMenuAsync();
     }
 
-    private Point? _rightClickPosition;
-
     private void OnWindowLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         System.Diagnostics.Debug.WriteLine("*** OnWindowLoaded called ***");
