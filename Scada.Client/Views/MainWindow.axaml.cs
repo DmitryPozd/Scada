@@ -840,8 +840,8 @@ public partial class MainWindow : Window
         var dialog = new Window
         {
             Title = "Добавить элемент управления",
-            Width = 450,
-            Height = 400,
+            Width = 550,
+            Height = 480,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };
