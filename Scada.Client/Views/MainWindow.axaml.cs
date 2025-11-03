@@ -99,7 +99,9 @@ public partial class MainWindow : Window
         {
             // Подписка на обновление Coil тегов
             vm.CoilTagsUpdated += OnCoilTagsUpdated;
-            this.Title = "SCADA - Подписка на CoilTagsUpdated выполнена!";
+            // Подписка на обновление регистров (Holding/Input)
+            vm.RegisterTagsUpdated += OnRegisterTagsUpdated;
+            this.Title = "SCADA - Подписка на события выполнена!";
             
             vm.SettingsLoadedEvent += (s, args) =>
             {
@@ -107,6 +109,8 @@ public partial class MainWindow : Window
                 RestoreMnemoschemeElements();
                 // Обновляем теги для всех существующих кнопок
                 UpdateButtonAvailableTags(vm);
+                // Восстанавливаем размер и позицию окна
+                RestoreWindowState(vm);
             };
             
             // Если настройки уже загружены (синхронный путь)
@@ -116,6 +120,8 @@ public partial class MainWindow : Window
                 RestoreMnemoschemeElements();
                 // Обновляем теги для всех существующих кнопок
                 UpdateButtonAvailableTags(vm);
+                // Восстанавливаем размер и позицию окна
+                RestoreWindowState(vm);
             }
         }
         else
@@ -190,6 +196,66 @@ public partial class MainWindow : Window
         }
         this.Title = $"SCADA - Обновлено {updatedCount}/{totalButtons} кнопок";
         System.Diagnostics.Debug.WriteLine($"OnCoilTagsUpdated: updated {updatedCount} out of {totalButtons} buttons");
+    }
+
+    private void OnRegisterTagsUpdated(object? sender, Dictionary<ushort, ushort> registerValues)
+    {
+        System.Diagnostics.Debug.WriteLine($"OnRegisterTagsUpdated: received {registerValues.Count} register values");
+        foreach (var kvp in registerValues)
+        {
+            System.Diagnostics.Debug.WriteLine($"  RegisterValue: addr={kvp.Key}, value={kvp.Value}");
+        }
+        
+        var canvas = this.FindControl<Canvas>("MnemoCanvas");
+        if (canvas == null)
+        {
+            System.Diagnostics.Debug.WriteLine("OnRegisterTagsUpdated: Canvas not found!");
+            return;
+        }
+
+        int updatedCount = 0;
+        foreach (var child in canvas.Children)
+        {
+            if (child is DraggableControl draggable)
+            {
+                if (draggable.Content is DisplayControl display)
+                {
+                    if (registerValues.TryGetValue(display.RegisterAddress, out ushort value))
+                    {
+                        display.DisplayValue = value.ToString();
+                        updatedCount++;
+                        System.Diagnostics.Debug.WriteLine($"  Updated DisplayControl at address {display.RegisterAddress} to {value}");
+                    }
+                }
+                else if (draggable.Content is SliderControl slider)
+                {
+                    if (registerValues.TryGetValue(slider.RegisterAddress, out ushort value))
+                    {
+                        slider.CurrentValue = value;
+                        updatedCount++;
+                        System.Diagnostics.Debug.WriteLine($"  Updated SliderControl at address {slider.RegisterAddress} to {value}");
+                    }
+                }
+                else if (draggable.Content is NumericInputControl numeric)
+                {
+                    // НЕ обновляем, если пользователь редактирует поле
+                    if (!numeric.IsEditing)
+                    {
+                        if (registerValues.TryGetValue(numeric.RegisterAddress, out ushort value))
+                        {
+                            numeric.InputValue = value.ToString();
+                            updatedCount++;
+                            System.Diagnostics.Debug.WriteLine($"  Updated NumericInputControl at address {numeric.RegisterAddress} to {value}");
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Skipping NumericInputControl at address {numeric.RegisterAddress} - user is editing");
+                    }
+                }
+            }
+        }
+        System.Diagnostics.Debug.WriteLine($"OnRegisterTagsUpdated: updated {updatedCount} controls");
     }
 
     private void RestoreMnemoschemeElements()
@@ -328,6 +394,73 @@ public partial class MainWindow : Window
                         ThresholdLow = sensorElem.ThresholdLow,
                         ThresholdHigh = sensorElem.ThresholdHigh
                     };
+                    break;
+                case SliderElement sliderElem:
+                    var slider = new SliderControl
+                    {
+                        Label = sliderElem.Label,
+                        RegisterAddress = sliderElem.RegisterAddress,
+                        MinValue = sliderElem.MinValue,
+                        MaxValue = sliderElem.MaxValue,
+                        CurrentValue = sliderElem.MinValue,
+                        AvailableTags = GetFilteredTagsForHoldingRegister(vm.ConnectionConfig.Tags)
+                    };
+                    if (!string.IsNullOrEmpty(sliderElem.TagName))
+                    {
+                        slider.SelectedTag = vm.ConnectionConfig.Tags.FirstOrDefault(t => t.Name == sliderElem.TagName);
+                    }
+                    slider.WriteCommand = ReactiveCommand.CreateFromTask(async () =>
+                    {
+                        await vm.WriteRegisterAsync(slider.RegisterAddress, (ushort)slider.CurrentValue);
+                    });
+                    slider.DeleteRequested += OnButtonDeleteRequested;
+                    slider.TagChanged += OnButtonTagChanged;
+                    control = slider;
+                    break;
+                case NumericInputElement numericElem:
+                    var numeric = new NumericInputControl
+                    {
+                        Label = numericElem.Label,
+                        RegisterAddress = numericElem.RegisterAddress,
+                        InputValue = "0",
+                        Unit = numericElem.Unit,
+                        AvailableTags = GetFilteredTagsForHoldingRegister(vm.ConnectionConfig.Tags)
+                    };
+                    if (!string.IsNullOrEmpty(numericElem.TagName))
+                    {
+                        numeric.SelectedTag = vm.ConnectionConfig.Tags.FirstOrDefault(t => t.Name == numericElem.TagName);
+                    }
+                    numeric.WriteCommand = ReactiveCommand.CreateFromTask(async () =>
+                    {
+                        if (ushort.TryParse(numeric.InputValue, out ushort value))
+                        {
+                            await vm.WriteRegisterAsync(numeric.RegisterAddress, value);
+                        }
+                        else
+                        {
+                            vm.ConnectionStatus = "⚠ Ошибка: введите корректное число (0-65535)";
+                        }
+                    });
+                    numeric.DeleteRequested += OnButtonDeleteRequested;
+                    numeric.TagChanged += OnButtonTagChanged;
+                    control = numeric;
+                    break;
+                case DisplayElement displayElem:
+                    var display = new DisplayControl
+                    {
+                        Label = displayElem.Label,
+                        RegisterAddress = displayElem.RegisterAddress,
+                        DisplayValue = "0",
+                        Unit = displayElem.Unit,
+                        AvailableTags = GetFilteredTagsForInputRegister(vm.ConnectionConfig.Tags)
+                    };
+                    if (!string.IsNullOrEmpty(displayElem.TagName))
+                    {
+                        display.SelectedTag = vm.ConnectionConfig.Tags.FirstOrDefault(t => t.Name == displayElem.TagName);
+                    }
+                    display.DeleteRequested += OnButtonDeleteRequested;
+                    display.TagChanged += OnButtonTagChanged;
+                    control = display;
                     break;
             }
             if (control != null)
@@ -647,6 +780,15 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainWindowViewModel vm)
         {
+            // Сохраняем размер и позицию окна
+            vm.ConnectionConfig.WindowWidth = this.Width;
+            vm.ConnectionConfig.WindowHeight = this.Height;
+            vm.ConnectionConfig.WindowX = this.Position.X;
+            vm.ConnectionConfig.WindowY = this.Position.Y;
+            vm.ConnectionConfig.IsMaximized = this.WindowState == WindowState.Maximized;
+            
+            System.Diagnostics.Debug.WriteLine($"Saving window state: {Width}x{Height} at ({Position.X},{Position.Y}), Maximized={vm.ConnectionConfig.IsMaximized}");
+            
             CollectMnemoschemeElements(vm);
             await vm.SaveConfigurationAsync();
         }
@@ -758,6 +900,44 @@ public partial class MainWindow : Window
                     ThresholdHigh = sensor.ThresholdHigh
                 };
             }
+            else if (element is SliderControl slider)
+            {
+                mnemoElement = new SliderElement
+                {
+                    X = draggable.X,
+                    Y = draggable.Y,
+                    Label = slider.Label,
+                    RegisterAddress = slider.RegisterAddress,
+                    TagName = slider.SelectedTag?.Name,
+                    MinValue = slider.MinValue,
+                    MaxValue = slider.MaxValue,
+                    Unit = ""
+                };
+            }
+            else if (element is NumericInputControl numeric)
+            {
+                mnemoElement = new NumericInputElement
+                {
+                    X = draggable.X,
+                    Y = draggable.Y,
+                    Label = numeric.Label,
+                    RegisterAddress = numeric.RegisterAddress,
+                    TagName = numeric.SelectedTag?.Name,
+                    Unit = numeric.Unit
+                };
+            }
+            else if (element is DisplayControl display)
+            {
+                mnemoElement = new DisplayElement
+                {
+                    X = draggable.X,
+                    Y = draggable.Y,
+                    Label = display.Label,
+                    RegisterAddress = display.RegisterAddress,
+                    TagName = display.SelectedTag?.Name,
+                    Unit = display.Unit
+                };
+            }
             if (mnemoElement != null)
             {
                 vm.ConnectionConfig.MnemoschemeElements.Add(mnemoElement);
@@ -769,7 +949,7 @@ public partial class MainWindow : Window
     private ObservableCollection<TagDefinition> GetFilteredTagsForCoilButton(ObservableCollection<TagDefinition> allTags)
     {
         return new ObservableCollection<TagDefinition>(
-            allTags.Where(t => t.Register == RegisterType.Coils && t.Name.StartsWith("M") && t.Enabled)
+            allTags.Where(t => t.Register == RegisterType.Coils && t.Name.StartsWith("M"))
         );
     }
 
@@ -778,8 +958,30 @@ public partial class MainWindow : Window
         return new ObservableCollection<TagDefinition>(
             allTags.Where(t => 
                 ((t.Register == RegisterType.Input && t.Name.StartsWith("X")) ||
-                 (t.Register == RegisterType.Coils && t.Name.StartsWith("Y"))) && 
-                t.Enabled)
+                 (t.Register == RegisterType.Coils && t.Name.StartsWith("Y"))))
+        );
+    }
+
+    private ObservableCollection<TagDefinition> GetFilteredTagsForHoldingRegister(ObservableCollection<TagDefinition> allTags)
+    {
+        return new ObservableCollection<TagDefinition>(
+            allTags.Where(t => t.Register == RegisterType.Holding && 
+                              (t.Name.StartsWith("AQ") || t.Name.StartsWith("V")))
+        );
+    }
+
+    private ObservableCollection<TagDefinition> GetFilteredTagsForInputRegister(ObservableCollection<TagDefinition> allTags)
+    {
+        return new ObservableCollection<TagDefinition>(
+            allTags.Where(t => 
+                // Input Register теги
+                (t.Register == RegisterType.Input && 
+                 (t.Name.StartsWith("AI") || t.Name.StartsWith("V") || 
+                  t.Name.StartsWith("TV") || t.Name.StartsWith("CV") || 
+                  t.Name.StartsWith("SV"))) ||
+                // Holding Register теги (только для чтения через DisplayControl)
+                (t.Register == RegisterType.Holding && 
+                 (t.Name.StartsWith("V") || t.Name.StartsWith("AQ"))))
         );
     }
 
@@ -841,7 +1043,7 @@ public partial class MainWindow : Window
         {
             Title = "Добавить элемент управления",
             Width = 550,
-            Height = 480,
+            Height = 650,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
         };
@@ -893,11 +1095,35 @@ public partial class MainWindow : Window
             dialog.Close();
         };
 
+        var sliderBtn = CreateMenuButton("🎚️ Ползунок", "Управление Holding Register с помощью ползунка");
+        sliderBtn.Click += (s, e) =>
+        {
+            CreateElementAtLastPosition(ElementType.Slider);
+            dialog.Close();
+        };
+
+        var numericInputBtn = CreateMenuButton("🔢 Числовой ввод", "Точный ввод значения в Holding Register");
+        numericInputBtn.Click += (s, e) =>
+        {
+            CreateElementAtLastPosition(ElementType.NumericInput);
+            dialog.Close();
+        };
+
+        var displayBtn = CreateMenuButton("📊 Индикатор", "Отображение значения Input Register (только чтение)");
+        displayBtn.Click += (s, e) =>
+        {
+            CreateElementAtLastPosition(ElementType.Display);
+            dialog.Close();
+        };
+
         stack.Children.Add(coilButtonBtn);
         stack.Children.Add(momentaryButtonBtn);
         stack.Children.Add(imageMotorBtn);
         stack.Children.Add(imageValveBtn);
         stack.Children.Add(imageFanBtn);
+        stack.Children.Add(sliderBtn);
+        stack.Children.Add(numericInputBtn);
+        stack.Children.Add(displayBtn);
 
         var cancelBtn = new Button
         {
@@ -1035,6 +1261,64 @@ public partial class MainWindow : Window
                 control = imgBtn;
                 break;
 
+            case ElementType.Slider:
+                var slider = new SliderControl
+                {
+                    Label = $"Ползунок {_dynamicButtonCounter++}",
+                    RegisterAddress = 0,
+                    MinValue = 0,
+                    MaxValue = 100,
+                    CurrentValue = 0,
+                    AvailableTags = GetFilteredTagsForHoldingRegister(vm.ConnectionConfig.Tags)
+                };
+                slider.WriteCommand = ReactiveCommand.CreateFromTask(async () =>
+                {
+                    await vm.WriteRegisterAsync(slider.RegisterAddress, (ushort)slider.CurrentValue);
+                });
+                slider.DeleteRequested += OnButtonDeleteRequested;
+                slider.TagChanged += OnButtonTagChanged;
+                control = slider;
+                break;
+
+            case ElementType.NumericInput:
+                var numericInput = new NumericInputControl
+                {
+                    Label = $"Ввод {_dynamicButtonCounter++}",
+                    RegisterAddress = 0,
+                    InputValue = "0",
+                    Unit = "",
+                    AvailableTags = GetFilteredTagsForHoldingRegister(vm.ConnectionConfig.Tags)
+                };
+                numericInput.WriteCommand = ReactiveCommand.CreateFromTask(async () =>
+                {
+                    if (ushort.TryParse(numericInput.InputValue, out ushort value))
+                    {
+                        await vm.WriteRegisterAsync(numericInput.RegisterAddress, value);
+                    }
+                    else
+                    {
+                        vm.ConnectionStatus = "⚠ Ошибка: введите корректное число (0-65535)";
+                    }
+                });
+                numericInput.DeleteRequested += OnButtonDeleteRequested;
+                numericInput.TagChanged += OnButtonTagChanged;
+                control = numericInput;
+                break;
+
+            case ElementType.Display:
+                var display = new DisplayControl
+                {
+                    Label = $"Индикатор {_dynamicButtonCounter++}",
+                    RegisterAddress = 0,
+                    DisplayValue = "0",
+                    Unit = "",
+                    AvailableTags = GetFilteredTagsForInputRegister(vm.ConnectionConfig.Tags)
+                };
+                display.DeleteRequested += OnButtonDeleteRequested;
+                display.TagChanged += OnButtonTagChanged;
+                control = display;
+                break;
+
             default:
                 return;
         }
@@ -1052,5 +1336,29 @@ public partial class MainWindow : Window
         CollectMnemoschemeElements(vm);
         await vm.SaveConfigurationAsync();
         vm.ConnectionStatus = $"Добавлен элемент: {elementType}";
+    }
+
+    private void RestoreWindowState(MainWindowViewModel vm)
+    {
+        System.Diagnostics.Debug.WriteLine($"Restoring window state: {vm.ConnectionConfig.WindowWidth}x{vm.ConnectionConfig.WindowHeight} at ({vm.ConnectionConfig.WindowX},{vm.ConnectionConfig.WindowY}), Maximized={vm.ConnectionConfig.IsMaximized}");
+        
+        // Восстанавливаем размер окна
+        if (vm.ConnectionConfig.WindowWidth > 0 && vm.ConnectionConfig.WindowHeight > 0)
+        {
+            this.Width = vm.ConnectionConfig.WindowWidth;
+            this.Height = vm.ConnectionConfig.WindowHeight;
+        }
+        
+        // Восстанавливаем позицию окна
+        if (vm.ConnectionConfig.WindowX >= 0 && vm.ConnectionConfig.WindowY >= 0)
+        {
+            this.Position = new PixelPoint((int)vm.ConnectionConfig.WindowX, (int)vm.ConnectionConfig.WindowY);
+        }
+        
+        // Восстанавливаем состояние (развернуто/нормальное)
+        if (vm.ConnectionConfig.IsMaximized)
+        {
+            this.WindowState = WindowState.Maximized;
+        }
     }
 }

@@ -21,4 +21,13 @@ public class ModbusConnectionConfig
     /// Mnemoscheme elements (buttons, pumps, valves, sensors) with positions and parameters
     /// </summary>
     public ObservableCollection<MnemoschemeElement> MnemoschemeElements { get; set; } = new();
+
+    /// <summary>
+    /// Размер и позиция главного окна
+    /// </summary>
+    public double WindowWidth { get; set; } = 1400;
+    public double WindowHeight { get; set; } = 900;
+    public double WindowX { get; set; } = 100;
+    public double WindowY { get; set; } = 100;
+    public bool IsMaximized { get; set; } = false;
 }

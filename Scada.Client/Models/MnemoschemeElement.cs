@@ -13,7 +13,10 @@ public enum ElementType
     ImageButton,
     Pump,
     Valve,
-    Sensor
+    Sensor,
+    Slider,
+    NumericInput,
+    Display
 }
 
 /// <summary>
@@ -23,6 +26,9 @@ public enum ElementType
 [JsonDerivedType(typeof(PumpElement), typeDiscriminator: "pump")]
 [JsonDerivedType(typeof(ValveElement), typeDiscriminator: "valve")]
 [JsonDerivedType(typeof(SensorElement), typeDiscriminator: "sensor")]
+[JsonDerivedType(typeof(SliderElement), typeDiscriminator: "slider")]
+[JsonDerivedType(typeof(NumericInputElement), typeDiscriminator: "numericInput")]
+[JsonDerivedType(typeof(DisplayElement), typeDiscriminator: "display")]
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 public class MnemoschemeElement
 {
@@ -79,5 +85,52 @@ public class SensorElement : MnemoschemeElement
     public SensorElement()
     {
         Type = ElementType.Sensor;
+    }
+}
+
+/// <summary>
+/// Элемент ползунка для Holding Register
+/// </summary>
+public class SliderElement : MnemoschemeElement
+{
+    public ushort RegisterAddress { get; set; }
+    public string? TagName { get; set; }
+    public int MinValue { get; set; }
+    public int MaxValue { get; set; } = 100;
+    public string Unit { get; set; } = string.Empty;
+
+    public SliderElement()
+    {
+        Type = ElementType.Slider;
+    }
+}
+
+/// <summary>
+/// Элемент числового ввода для Holding Register
+/// </summary>
+public class NumericInputElement : MnemoschemeElement
+{
+    public ushort RegisterAddress { get; set; }
+    public string? TagName { get; set; }
+    public string Unit { get; set; } = string.Empty;
+
+    public NumericInputElement()
+    {
+        Type = ElementType.NumericInput;
+    }
+}
+
+/// <summary>
+/// Элемент отображения для Input Register (только чтение)
+/// </summary>
+public class DisplayElement : MnemoschemeElement
+{
+    public ushort RegisterAddress { get; set; }
+    public string? TagName { get; set; }
+    public string Unit { get; set; } = string.Empty;
+
+    public DisplayElement()
+    {
+        Type = ElementType.Display;
     }
 }

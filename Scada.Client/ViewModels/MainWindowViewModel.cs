@@ -30,6 +30,9 @@ public class MainWindowViewModel : ViewModelBase
     // Event for coil tags update
     public event EventHandler<Dictionary<ushort, bool>>? CoilTagsUpdated;
 
+    // Event for register tags update (Holding and Input registers)
+    public event EventHandler<Dictionary<ushort, ushort>>? RegisterTagsUpdated;
+
     // Mnemoscheme properties
     private bool _pump1Running;
     private bool _pump1Alarm;
@@ -441,6 +444,10 @@ public class MainWindowViewModel : ViewModelBase
             await PollGroupAsync(enabled, RegisterType.Input);
             await PollGroupCoilsAsync(enabled);
             await PollGroupDiscreteInputBitsAsync(enabled); // Чтение X-тегов (входные биты)
+            
+            // Опрашиваем регистры элементов мнемосхемы (если не в активных тегах)
+            await PollMnemoschemeRegistersAsync();
+            
             // НЕ перезаписываем статус - оставляем сообщение из PollGroupCoilsAsync
         }
         catch (FluentModbus.ModbusException ex) when (ex.Message.Contains("protocol identifier"))
@@ -467,6 +474,170 @@ public class MainWindowViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Опрос регистров, назначенных элементам мнемосхемы (Slider, NumericInput, Display)
+    /// </summary>
+    private async Task PollMnemoschemeRegistersAsync()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"=== PollMnemoschemeRegistersAsync START ===");
+            System.Diagnostics.Debug.WriteLine($"Total mnemoscheme elements: {ConnectionConfig.MnemoschemeElements.Count}");
+            
+            var holdingAddresses = new HashSet<ushort>();
+            var inputAddresses = new HashSet<ushort>();
+            
+            // Собираем адреса из элементов мнемосхемы
+            foreach (var element in ConnectionConfig.MnemoschemeElements)
+            {
+                ushort address = 0;
+                bool isHolding = false;
+                bool isInput = false;
+                string elementType = element.GetType().Name;
+                
+                if (element is SliderElement slider)
+                {
+                    address = slider.RegisterAddress;
+                    isHolding = true;
+                    System.Diagnostics.Debug.WriteLine($"  Found SliderElement: Address={address}, TagName={slider.TagName}");
+                }
+                else if (element is NumericInputElement numeric)
+                {
+                    address = numeric.RegisterAddress;
+                    isHolding = true;
+                    System.Diagnostics.Debug.WriteLine($"  Found NumericInputElement: Address={address}, TagName={numeric.TagName}");
+                }
+                else if (element is DisplayElement display)
+                {
+                    address = display.RegisterAddress;
+                    System.Diagnostics.Debug.WriteLine($"  Found DisplayElement: Address={address}, TagName={display.TagName}");
+                    
+                    // DisplayControl может читать из обоих типов
+                    // Проверим по тегу если есть
+                    if (!string.IsNullOrEmpty(display.TagName))
+                    {
+                        var tag = ConnectionConfig.Tags.FirstOrDefault(t => t.Name == display.TagName);
+                        if (tag != null)
+                        {
+                            isHolding = tag.Register == RegisterType.Holding;
+                            isInput = tag.Register == RegisterType.Input;
+                            System.Diagnostics.Debug.WriteLine($"    Tag found in active tags: Register={tag.Register}");
+                        }
+                        else
+                        {
+                            // Если тега нет в активных, попробуем угадать по имени
+                            isHolding = display.TagName.StartsWith("V") || display.TagName.StartsWith("AQ");
+                            isInput = display.TagName.StartsWith("AI") || display.TagName.StartsWith("TV") || 
+                                     display.TagName.StartsWith("CV") || display.TagName.StartsWith("SV");
+                            System.Diagnostics.Debug.WriteLine($"    Tag NOT in active tags, guessed: isHolding={isHolding}, isInput={isInput}");
+                        }
+                    }
+                    else
+                    {
+                        // По умолчанию считаем Input Register
+                        isInput = true;
+                        System.Diagnostics.Debug.WriteLine($"    No tag name, assuming Input Register");
+                    }
+                }
+                
+                // ВАЖНО: Пропускаем адрес 0 (невалидный/не настроенный элемент)
+                if (address > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"    Checking address {address}: isHolding={isHolding}, isInput={isInput}");
+                    
+                    // Проверяем, не опрашивается ли уже через активные теги
+                    var existingTag = ConnectionConfig.Tags.FirstOrDefault(t => t.Address == address);
+                    if (existingTag == null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"    Address {address} NOT in active tags, adding to poll list");
+                        if (isHolding)
+                            holdingAddresses.Add(address);
+                        if (isInput)
+                            inputAddresses.Add(address);
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"    Address {address} ALREADY in active tags (tag: {existingTag.Name}), skipping");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"    Skipping invalid address 0");
+                }
+            }
+            
+            // Если нет адресов для опроса - выходим
+            if (holdingAddresses.Count == 0 && inputAddresses.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"No addresses to poll from mnemoscheme");
+                return;
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"Addresses to poll: Holding={holdingAddresses.Count}, Input={inputAddresses.Count}");
+            System.Diagnostics.Debug.WriteLine($"  Holding: [{string.Join(", ", holdingAddresses)}]");
+            System.Diagnostics.Debug.WriteLine($"  Input: [{string.Join(", ", inputAddresses)}]");
+            
+            // Читаем Holding регистры
+            if (holdingAddresses.Count > 0)
+            {
+                var registerValues = new Dictionary<ushort, ushort>();
+                foreach (var addr in holdingAddresses)
+                {
+                    try
+                    {
+                        var values = await _modbusService.ReadHoldingRegistersAsync(addr, 1);
+                        if (values.Length > 0)
+                        {
+                            registerValues[addr] = values[0];
+                            System.Diagnostics.Debug.WriteLine($"  Holding[{addr}] = {values[0]}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Failed to read Holding[{addr}]: {ex.Message}");
+                    }
+                }
+                
+                if (registerValues.Count > 0 && RegisterTagsUpdated != null)
+                {
+                    RegisterTagsUpdated.Invoke(this, registerValues);
+                }
+            }
+            
+            // Читаем Input регистры
+            if (inputAddresses.Count > 0)
+            {
+                var registerValues = new Dictionary<ushort, ushort>();
+                foreach (var addr in inputAddresses)
+                {
+                    try
+                    {
+                        var values = await _modbusService.ReadInputRegistersAsync(addr, 1);
+                        if (values.Length > 0)
+                        {
+                            registerValues[addr] = values[0];
+                            System.Diagnostics.Debug.WriteLine($"  Input[{addr}] = {values[0]}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Failed to read Input[{addr}]: {ex.Message}");
+                    }
+                }
+                
+                if (registerValues.Count > 0 && RegisterTagsUpdated != null)
+                {
+                    RegisterTagsUpdated.Invoke(this, registerValues);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PollMnemoschemeRegistersAsync failed: {ex.Message}");
+            // НЕ пробрасываем исключение дальше - не должно ломать общий опрос
+        }
+    }
+
     private static int GetWordCount(DataType type)
         => type switch
         {
@@ -478,10 +649,24 @@ public class MainWindowViewModel : ViewModelBase
 
     private async Task PollGroupAsync(System.Collections.ObjectModel.ObservableCollection<TagDefinition> tags, RegisterType regType)
     {
+        System.Diagnostics.Debug.WriteLine($"=== PollGroupAsync START: RegisterType={regType} ===");
+        
         var group = tags.Where(t => t.Enabled && t.Register == regType).OrderBy(t => t.Address).ToList();
+        
+        System.Diagnostics.Debug.WriteLine($"  Total tags in collection: {tags.Count}");
+        System.Diagnostics.Debug.WriteLine($"  Filtered tags for {regType}: {group.Count}");
+        
+        if (group.Count > 0)
+        {
+            foreach (var tag in group)
+            {
+                System.Diagnostics.Debug.WriteLine($"    Tag: {tag.Name}, Address={tag.Address}, Enabled={tag.Enabled}, Type={tag.Type}");
+            }
+        }
         
         if (group.Count == 0)
         {
+            System.Diagnostics.Debug.WriteLine($"PollGroupAsync: No enabled tags for {regType}, skipping");
             return;
         }
 
@@ -489,6 +674,8 @@ public class MainWindowViewModel : ViewModelBase
         ushort min = group.Min(t => t.Address);
         int max = group.Max(t => t.Address + GetWordCount(t.Type) - 1);
         int count = max - min + 1;
+        
+        System.Diagnostics.Debug.WriteLine($"  Block range: [{min}-{max}], count={count}");
 
         // Если диапазон слишком большой (>125 регистров) - читаем поштучно
         const int MAX_BLOCK_SIZE = 125;
@@ -511,6 +698,9 @@ public class MainWindowViewModel : ViewModelBase
                     System.Diagnostics.Debug.WriteLine($"Failed to read {regType} tag {tag.Name} at {tag.Address}: {ex.Message}");
                 }
             }
+            
+            // ВАЖНО: Генерируем событие даже при индивидуальных чтениях
+            GenerateRegisterTagsUpdatedEvent(group);
             return;
         }
 
@@ -541,6 +731,9 @@ public class MainWindowViewModel : ViewModelBase
                     System.Diagnostics.Debug.WriteLine($"Failed to read {regType} tag {tag.Name} at {tag.Address}: {tagEx.Message}");
                 }
             }
+            
+            // ВАЖНО: Генерируем событие даже при индивидуальных чтениях после ошибки блока
+            GenerateRegisterTagsUpdatedEvent(group);
             return;
         }
 
@@ -552,6 +745,36 @@ public class MainWindowViewModel : ViewModelBase
             for (int i = 0; i < words; i++) regs[i] = block[offset + i];
 
             ParseTagValueFromRegisters(tag, regs);
+        }
+
+        // Генерируем событие с обновлёнными значениями регистров после блочного чтения
+        GenerateRegisterTagsUpdatedEvent(group);
+    }
+
+    /// <summary>
+    /// Генерирует событие RegisterTagsUpdated для группы тегов
+    /// </summary>
+    private void GenerateRegisterTagsUpdatedEvent(List<TagDefinition> group)
+    {
+        if (RegisterTagsUpdated != null && group.Count > 0)
+        {
+            var registerValues = new Dictionary<ushort, ushort>();
+            foreach (var tag in group)
+            {
+                // Для DisplayControl берём только первый регистр (упрощённо)
+                // В будущем можно добавить поддержку многословных значений
+                ushort regValue = (ushort)tag.Value;
+                registerValues[tag.Address] = regValue;
+                System.Diagnostics.Debug.WriteLine($"  RegisterEvent: {tag.Name} (addr={tag.Address}, type={tag.Register}) = {regValue}");
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"GenerateRegisterTagsUpdatedEvent: sending {registerValues.Count} register values, invoking event...");
+            RegisterTagsUpdated.Invoke(this, registerValues);
+            System.Diagnostics.Debug.WriteLine($"GenerateRegisterTagsUpdatedEvent: event invoked successfully");
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine($"GenerateRegisterTagsUpdatedEvent: NOT sending (event={RegisterTagsUpdated != null}, count={group.Count})");
         }
     }
 
@@ -1028,6 +1251,53 @@ public class MainWindowViewModel : ViewModelBase
             
             // Логируем для отладки
             System.Diagnostics.Debug.WriteLine($"WriteCoilAsync failed: address={address}, value={value}, error={ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Запись в Holding Register
+    /// </summary>
+    public async Task WriteRegisterAsync(ushort address, ushort value)
+    {
+        System.Diagnostics.Debug.WriteLine($"=== WriteRegisterAsync START: address={address}, value={value} ===");
+        
+        if (!IsConnected)
+        {
+            System.Diagnostics.Debug.WriteLine($"WriteRegisterAsync: NOT CONNECTED, aborting");
+            ConnectionStatus = "Ошибка: не подключен к серверу";
+            return;
+        }
+        
+        System.Diagnostics.Debug.WriteLine($"WriteRegisterAsync: Connected, calling ModbusService.WriteHoldingRegisterAsync...");
+        
+        try
+        {
+            await _modbusService.WriteHoldingRegisterAsync(address, value);
+            ConnectionStatus = $"✓ Записано в регистр {address}: {value}";
+            System.Diagnostics.Debug.WriteLine($"WriteRegisterAsync: SUCCESS - written to address {address}, value={value}");
+        }
+        catch (Exception ex)
+        {
+            string errorMsg;
+            if (ex.Message.Contains("allowable address"))
+            {
+                errorMsg = $"Адрес {address} недоступен на сервере.";
+            }
+            else if (ex.Message.Contains("function code is invalid") || ex.Message.Contains("код функции"))
+            {
+                errorMsg = $"Адрес {address} не поддерживает запись регистра. Проверьте тип регистра.";
+            }
+            else
+            {
+                errorMsg = ex.Message;
+            }
+            
+            ConnectionStatus = $"⚠ Ошибка записи: {errorMsg}";
+            
+            // Логируем для отладки
+            System.Diagnostics.Debug.WriteLine($"WriteRegisterAsync FAILED: address={address}, value={value}, error={ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"  Exception type: {ex.GetType().Name}");
+            System.Diagnostics.Debug.WriteLine($"  Stack trace: {ex.StackTrace}");
         }
     }
 

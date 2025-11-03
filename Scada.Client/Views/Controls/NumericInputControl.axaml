@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Scada.Client.Views.Controls"
+             x:Class="Scada.Client.Views.Controls.NumericInputControl"
+             x:DataType="controls:NumericInputControl">
+    
+    <Border Background="#F5F5F5" 
+            BorderBrush="#CCCCCC" 
+            BorderThickness="1" 
+            CornerRadius="4"
+            Width="200" 
+            Height="100">
+        
+        <StackPanel Margin="10" Spacing="8">
+            <!-- Метка -->
+            <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:NumericInputControl}}" 
+                       FontWeight="SemiBold" 
+                       FontSize="13"
+                       HorizontalAlignment="Center"/>
+            
+            <!-- Поле ввода -->
+            <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                <TextBox x:Name="ValueTextBox"
+                         Text="{Binding InputValue, RelativeSource={RelativeSource AncestorType=controls:NumericInputControl}}"
+                         Width="100"
+                         Watermark="0"
+                         HorizontalContentAlignment="Right"/>
+                <TextBlock Text="{Binding Unit, RelativeSource={RelativeSource AncestorType=controls:NumericInputControl}}"
+                           VerticalAlignment="Center"
+                           Foreground="#666666"/>
+            </StackPanel>
+            
+            <!-- Кнопка записи -->
+            <Button Content="Записать" 
+                    Command="{Binding WriteCommand, RelativeSource={RelativeSource AncestorType=controls:NumericInputControl}}"
+                    HorizontalAlignment="Center"
+                    Padding="20,4"/>
+        </StackPanel>
+        
+    </Border>
+    
+</UserControl>

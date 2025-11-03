@@ -87,9 +87,23 @@ public class ModbusClientService : IModbusClientService, IDisposable
     public async Task WriteHoldingRegisterAsync(ushort address, ushort value)
     {
         if (_client == null || !_client.IsConnected)
+        {
+            System.Diagnostics.Debug.WriteLine($"WriteHoldingRegister ERROR: client not connected!");
             throw new InvalidOperationException("Modbus client is not connected.");
+        }
 
-        await Task.Run(() => _client.WriteSingleRegister(_unitId, address, value));
+        System.Diagnostics.Debug.WriteLine($"WriteHoldingRegister: address={address}, value={value}, unitId={_unitId}");
+        
+        try
+        {
+            await Task.Run(() => _client.WriteSingleRegister(_unitId, address, value));
+            System.Diagnostics.Debug.WriteLine($"WriteHoldingRegister SUCCESS: address={address}, value={value}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"WriteHoldingRegister EXCEPTION: {ex.GetType().Name} - {ex.Message}");
+            throw;
+        }
     }
 
     public async Task WriteCoilAsync(ushort address, bool value)
