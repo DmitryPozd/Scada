@@ -699,7 +699,19 @@ public partial class MainWindow : Window
             {
                 mainVm.ConnectionConfig.Tags.Add(tag);
             }
-            await mainVm.SaveSettingsAsync();
+            
+            // Помечаем что теги были инициализированы пользователем
+            mainVm.ConnectionConfig.TagsInitialized = true;
+            
+            System.Diagnostics.Debug.WriteLine($"MainWindow: After TagsEditor - {mainVm.ConnectionConfig.Tags.Count} tags in config, TagsInitialized={mainVm.ConnectionConfig.TagsInitialized}");
+            
+            // Собираем текущие элементы мнемосхемы перед сохранением
+            CollectMnemoschemeElements(mainVm);
+            
+            // Сохраняем полную конфигурацию
+            await mainVm.SaveConfigurationAsync();
+            
+            System.Diagnostics.Debug.WriteLine($"MainWindow: SaveConfigurationAsync completed");
 
             // Обновляем доступные теги для всех элементов управления
             UpdateAllButtonAvailableTags();

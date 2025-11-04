@@ -1034,10 +1034,10 @@ public class MainWindowViewModel : ViewModelBase
             ConnectionConfig = loaded;
         }
         
-        // Если теги пустые, загружаем из tags.json (первые 20 каждого типа)
-        if (ConnectionConfig.Tags.Count == 0)
+        // Загружаем теги из tags.json ТОЛЬКО если они еще не были инициализированы
+        if (!ConnectionConfig.TagsInitialized && ConnectionConfig.Tags.Count == 0)
         {
-            Console.WriteLine("=== Tags are empty, loading from tags.json... ===");
+            Console.WriteLine("=== First run: Loading tags from tags.json... ===");
             var tagsFromFile = await _tagsConfigService.LoadFirstNTagsPerTypeAsync(20);
             Console.WriteLine($"=== Received {tagsFromFile.Count} tags from TagsConfigService ===");
             
@@ -1056,6 +1056,9 @@ public class MainWindowViewModel : ViewModelBase
                 var holdingCount = ConnectionConfig.Tags.Count(t => t.Register == RegisterType.Holding);
                 Console.WriteLine($"=== Register types: Coils={coilCount}, Input={inputCount}, Holding={holdingCount} ===");
                 
+                // Помечаем что теги инициализированы
+                ConnectionConfig.TagsInitialized = true;
+                
                 // Сохраняем настройки с загруженными тегами
                 await SaveSettingsAsync();
             }
@@ -1064,11 +1067,18 @@ public class MainWindowViewModel : ViewModelBase
                 Console.WriteLine("=== No tags loaded from tags.json, using default tags ===");
                 // Если tags.json не найден, используем старые дефолтные теги
                 InitializeDefaultTags();
+                ConnectionConfig.TagsInitialized = true;
             }
+        }
+        else if (ConnectionConfig.TagsInitialized)
+        {
+            Console.WriteLine($"=== Tags already initialized: {ConnectionConfig.Tags.Count} tags ===");
         }
         else
         {
             Console.WriteLine($"=== Tags already exist in settings: {ConnectionConfig.Tags.Count} tags ===");
+            // Помечаем что теги инициализированы (для старых конфигураций)
+            ConnectionConfig.TagsInitialized = true;
         }
         
         // Сигнализируем о завершении загрузки

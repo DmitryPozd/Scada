@@ -18,6 +18,11 @@ public class ModbusConnectionConfig
     public ObservableCollection<TagDefinition> Tags { get; set; } = new();
 
     /// <summary>
+    /// Флаг, указывающий что теги были инициализированы (не загружать автоматически из tags.json)
+    /// </summary>
+    public bool TagsInitialized { get; set; } = false;
+
+    /// <summary>
     /// Mnemoscheme elements (buttons, pumps, valves, sensors) with positions and parameters
     /// </summary>
     public ObservableCollection<MnemoschemeElement> MnemoschemeElements { get; set; } = new();
