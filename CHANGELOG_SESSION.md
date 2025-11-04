@@ -1,5 +1,48 @@
 # Changelog - Сессия 4 ноября 2025
 
+## Последние изменения
+
+### Коммит: b39daaf - "feat: Add editable data types for tags with validation rules"
+
+#### Добавлено:
+1. **Правила для типов данных тегов** (`TagDataTypeRules` в `Models/TagDefinition.cs`):
+   - X, Y, M, T, C, SM, S → только `Bool`
+   - AI, AQ → только `Int16` (signed 16-bit, -32768~32767)
+   - TV, CV, SV → `Int16` или `Int32`
+   - V → `Int16`, `Int32`, или `Float32`
+   - Метод `GetAllowedDataTypes(string tagName)` - возвращает допустимые типы
+   - Метод `GetDefaultDataType(string tagName)` - возвращает тип по умолчанию
+
+2. **Свойство `AllowedDataTypes`** в `TagDefinition`:
+   - Динамически вычисляется на основе имени тега
+   - Используется для заполнения ComboBox в UI
+   - Атрибут `[JsonIgnore]` - не сериализуется
+
+3. **Редактируемая колонка типа данных** в `TagsEditorWindow`:
+   - ComboBox для выбора типа данных
+   - Ограничение допустимых значений по правилам
+   - Режим редактирования по двойному клику
+
+4. **Python скрипт `update_tags_types.py`**:
+   - Аккуратно обновляет типы данных в tags.json
+   - Сохраняет всю структуру файла
+   - Обновлено 2693 тега из 35421
+
+#### Обновлено:
+1. **tags.json** - типы данных обновлены согласно схеме:
+   - Bool теги: X0-X1023, Y0-Y1023, M0-M7999, T0-T511, C0-C255, SM0-SM2047, S0-S1023
+   - Int16 теги: AI0-AI16, AQ0-AQ16, V0-V7999, TV0-TV511, CV0-CV255, SV0-SV999
+   - Все изменения применены без нарушения структуры файла
+
+#### Технические детали:
+- DataGridTemplateColumn с CellTemplate и CellEditingTemplate
+- Двусторонняя привязка `{Binding Type, Mode=TwoWay}`
+- ComboBox привязан к `AllowedDataTypes` для фильтрации
+- Python скрипт использует json.load/dump с сохранением отступов
+- Обработка 35421 тегов за несколько секунд
+
+---
+
 ## Сессия: Добавление ImageControl и улучшения UI
 
 ### Коммит: 645ec3a - "feat: Add ImageControl, improve dialogs, fix ImageButton scaling"
