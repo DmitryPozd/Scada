@@ -154,10 +154,17 @@ public partial class SliderControl : UserControl
         var dialog = new Window
         {
             Title = "Настройки ползунка",
-            Width = 600,
-            Height = 450,
+            SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            CanResize = false
+            CanResize = false,
+            MaxWidth = 700,
+            MaxHeight = 600
+        };
+
+        var scrollViewer = new ScrollViewer
+        {
+            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto
         };
 
         var stack = new StackPanel { Margin = new Thickness(20), Spacing = 12 };
@@ -207,7 +214,8 @@ public partial class SliderControl : UserControl
         // Выбор тега
         ShowTagSelectionInDialog(stack, dialog, labelInput, minInput, maxInput);
         
-        dialog.Content = stack;
+        scrollViewer.Content = stack;
+        dialog.Content = scrollViewer;
 
         if (this.VisualRoot is Window owner)
         {

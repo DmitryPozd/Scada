@@ -93,10 +93,11 @@ public partial class ValveControl : UserControl
         var dialog = new Window
         {
             Title = "Настройки клапана",
-            Width = 400,
-            Height = 200,
+            SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            CanResize = false
+            CanResize = false,
+            MaxWidth = 500,
+            MaxHeight = 400
         };
 
         var stack = new StackPanel { Margin = new Thickness(20), Spacing = 15 };

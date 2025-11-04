@@ -152,10 +152,11 @@ public partial class ImageControl : UserControl
         var dialog = new Window
         {
             Title = "Настройки изображения",
-            Width = 600,
-            Height = 600,
+            SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            CanResize = false
+            CanResize = false,
+            MaxWidth = 700,
+            MaxHeight = 700
         };
 
         var scrollViewer = new ScrollViewer

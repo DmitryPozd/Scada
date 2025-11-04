@@ -462,6 +462,18 @@ public partial class MainWindow : Window
                     display.TagChanged += OnButtonTagChanged;
                     control = display;
                     break;
+                case ImageElement imageElem:
+                    var imageCtrl = new ImageControl
+                    {
+                        Label = imageElem.Label,
+                        ImagePath = imageElem.ImagePath,
+                        Width = imageElem.Width,
+                        Height = imageElem.Height,
+                        ShowLabel = imageElem.ShowLabel
+                    };
+                    imageCtrl.DeleteRequested += OnButtonDeleteRequested;
+                    control = imageCtrl;
+                    break;
             }
             if (control != null)
             {
@@ -950,6 +962,19 @@ public partial class MainWindow : Window
                     Unit = display.Unit
                 };
             }
+            else if (element is ImageControl imageCtrl)
+            {
+                mnemoElement = new ImageElement
+                {
+                    X = draggable.X,
+                    Y = draggable.Y,
+                    Label = imageCtrl.Label,
+                    ImagePath = imageCtrl.ImagePath,
+                    Width = imageCtrl.Width,
+                    Height = imageCtrl.Height,
+                    ShowLabel = imageCtrl.ShowLabel
+                };
+            }
             if (mnemoElement != null)
             {
                 vm.ConnectionConfig.MnemoschemeElements.Add(mnemoElement);
@@ -1054,10 +1079,17 @@ public partial class MainWindow : Window
         var dialog = new Window
         {
             Title = "Добавить элемент управления",
-            Width = 550,
-            Height = 650,
+            SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            CanResize = false
+            CanResize = false,
+            MaxWidth = 600,
+            MaxHeight = 800
+        };
+
+        var scrollViewer = new ScrollViewer
+        {
+            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto
         };
 
         var stack = new StackPanel { Margin = new Thickness(20), Spacing = 15 };
@@ -1128,6 +1160,13 @@ public partial class MainWindow : Window
             dialog.Close();
         };
 
+        var imageBtn = CreateMenuButton("🖼️ Картинка", "Вставка изображения на мнемосхему (без управления)");
+        imageBtn.Click += (s, e) =>
+        {
+            CreateElementAtLastPosition(ElementType.ImageControl);
+            dialog.Close();
+        };
+
         stack.Children.Add(coilButtonBtn);
         stack.Children.Add(momentaryButtonBtn);
         stack.Children.Add(imageMotorBtn);
@@ -1136,6 +1175,7 @@ public partial class MainWindow : Window
         stack.Children.Add(sliderBtn);
         stack.Children.Add(numericInputBtn);
         stack.Children.Add(displayBtn);
+        stack.Children.Add(imageBtn);
 
         var cancelBtn = new Button
         {
@@ -1147,7 +1187,8 @@ public partial class MainWindow : Window
         cancelBtn.Click += (s, e) => dialog.Close();
         stack.Children.Add(cancelBtn);
 
-        dialog.Content = stack;
+        scrollViewer.Content = stack;
+        dialog.Content = scrollViewer;
 
         if (this.IsVisible)
         {
@@ -1329,6 +1370,19 @@ public partial class MainWindow : Window
                 display.DeleteRequested += OnButtonDeleteRequested;
                 display.TagChanged += OnButtonTagChanged;
                 control = display;
+                break;
+
+            case ElementType.ImageControl:
+                var imageControl = new ImageControl
+                {
+                    Label = $"Картинка {_dynamicButtonCounter++}",
+                    ImagePath = "",
+                    Width = 200,
+                    Height = 200,
+                    ShowLabel = true
+                };
+                imageControl.DeleteRequested += OnButtonDeleteRequested;
+                control = imageControl;
                 break;
 
             default:

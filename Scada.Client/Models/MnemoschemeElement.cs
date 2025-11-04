@@ -16,7 +16,8 @@ public enum ElementType
     Sensor,
     Slider,
     NumericInput,
-    Display
+    Display,
+    ImageControl
 }
 
 /// <summary>
@@ -29,6 +30,7 @@ public enum ElementType
 [JsonDerivedType(typeof(SliderElement), typeDiscriminator: "slider")]
 [JsonDerivedType(typeof(NumericInputElement), typeDiscriminator: "numericInput")]
 [JsonDerivedType(typeof(DisplayElement), typeDiscriminator: "display")]
+[JsonDerivedType(typeof(ImageElement), typeDiscriminator: "image")]
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 public class MnemoschemeElement
 {
@@ -132,5 +134,21 @@ public class DisplayElement : MnemoschemeElement
     public DisplayElement()
     {
         Type = ElementType.Display;
+    }
+}
+
+/// <summary>
+/// Элемент картинки (изображение без управления)
+/// </summary>
+public class ImageElement : MnemoschemeElement
+{
+    public string ImagePath { get; set; } = string.Empty;
+    public double Width { get; set; } = 200;
+    public double Height { get; set; } = 200;
+    public bool ShowLabel { get; set; } = true;
+
+    public ImageElement()
+    {
+        Type = ElementType.ImageControl;
     }
 }

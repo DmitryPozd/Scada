@@ -208,10 +208,17 @@ public partial class CoilButton : UserControl
         var dialog = new Window
         {
             Title = "Настройки кнопки",
-            Width = 600,
-            Height = 540,
+            SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            CanResize = false
+            CanResize = false,
+            MaxWidth = 700,
+            MaxHeight = 700
+        };
+
+        var scrollViewer = new ScrollViewer
+        {
+            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto
         };
 
         var stack = new StackPanel { Margin = new Thickness(20), Spacing = 12 };
@@ -462,7 +469,8 @@ public partial class CoilButton : UserControl
             ShowTagSelectionInDialog(stack, dialog, labelInput, iconOnInput, iconOffInput);
         }
         
-        dialog.Content = stack;
+        scrollViewer.Content = stack;
+        dialog.Content = scrollViewer;
 
         if (this.VisualRoot is Window owner)
         {
@@ -574,10 +582,11 @@ public partial class CoilButton : UserControl
         var dialog = new Window
         {
             Title = "Изменить адрес Coil",
-            Width = 350,
-            Height = 180,
+            SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            CanResize = false
+            CanResize = false,
+            MaxWidth = 450,
+            MaxHeight = 300
         };
 
         var stack = new StackPanel { Margin = new Thickness(20), Spacing = 15 };

@@ -117,9 +117,11 @@ public partial class CoilReadButton : UserControl
         var dialog = new Window
         {
             Title = "Выбор тега катушки",
-            Width = 350,
-            Height = 200,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner
+            SizeToContent = SizeToContent.WidthAndHeight,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false,
+            MaxWidth = 500,
+            MaxHeight = 400
         };
 
         var panel = new StackPanel { Margin = new Thickness(20), Spacing = 15 };
@@ -175,9 +177,11 @@ public partial class CoilReadButton : UserControl
         var dialog = new Window
         {
             Title = "Ввод адреса катушки",
-            Width = 300,
-            Height = 150,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner
+            SizeToContent = SizeToContent.WidthAndHeight,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false,
+            MaxWidth = 400,
+            MaxHeight = 300
         };
 
         var panel = new StackPanel { Margin = new Thickness(20), Spacing = 15 };
