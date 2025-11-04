@@ -81,7 +81,20 @@
                 <DataGridTextColumn Header="Название" Binding="{Binding Name}" Width="120" IsReadOnly="True"/>
                 <DataGridTextColumn Header="Адрес" Binding="{Binding Address}" Width="80" IsReadOnly="True"/>
                 <DataGridTextColumn Header="Тип рег." Binding="{Binding Register}" Width="100" IsReadOnly="True"/>
-                <DataGridTextColumn Header="Тип дан." Binding="{Binding Type}" Width="80" IsReadOnly="True"/>
+                <DataGridTemplateColumn Header="Тип дан." Width="100">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Type}" VerticalAlignment="Center" Margin="5,0"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                    <DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                            <ComboBox ItemsSource="{Binding AllowedDataTypes}" 
+                                      SelectedItem="{Binding Type, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellEditingTemplate>
+                </DataGridTemplateColumn>
                 <DataGridTextColumn Header="Масштаб" Binding="{Binding Scale}" Width="80"/>
                 <DataGridTextColumn Header="Смещение" Binding="{Binding Offset}" Width="80"/>
                 <DataGridCheckBoxColumn Header="Включен" Binding="{Binding Enabled}" Width="80"/>
