@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Scada.Client.Views.Controls"
+             x:Class="Scada.Client.Views.Controls.ImageControl">
+  
+  <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+          BorderThickness="1"
+          Background="Transparent">
+    <Grid>
+      <!-- Изображение -->
+      <Image x:Name="ImageElement"
+             Stretch="Fill"
+             Width="{Binding ImageWidth, RelativeSource={RelativeSource AncestorType=controls:ImageControl}}"
+             Height="{Binding ImageHeight, RelativeSource={RelativeSource AncestorType=controls:ImageControl}}"/>
+      
+      <!-- Подпись внизу (опционально) -->
+      <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:ImageControl}}"
+                 VerticalAlignment="Bottom"
+                 HorizontalAlignment="Center"
+                 Background="#AA000000"
+                 Foreground="White"
+                 Padding="4,2"
+                 FontSize="10"
+                 IsVisible="{Binding ShowLabel, RelativeSource={RelativeSource AncestorType=controls:ImageControl}}"/>
+    </Grid>
+  </Border>
+  
+</UserControl>
