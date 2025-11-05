@@ -1,71 +1,75 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:Scada.Client.Views.Controls"
-             x:Class="Scada.Client.Views.Controls.ImageButton"
-             Width="100" Height="120">
+             x:Class="Scada.Client.Views.Controls.ImageButton">
   
-  <!-- Некликабельная панель с графикой -->
-  <Border x:Name="Root"
-          Padding="8"
-          CornerRadius="8"
-          Background="{DynamicResource ControlFillColorDefaultBrush}"
-          BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-          BorderThickness="1">
-    <StackPanel Spacing="8" HorizontalAlignment="Center">
-      <!-- Название -->
-      <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:ImageButton}}"
-                 FontWeight="Bold" 
-                 HorizontalAlignment="Center" 
-                 FontSize="12"
-                 TextWrapping="Wrap"
-                 TextAlignment="Center"/>
-      
-      <!-- Графическое представление с индикацией состояния -->
-      <Viewbox Width="60" Height="50">
-        <Canvas Width="100" Height="80">
+  <Grid>
+    <!-- Основная панель с графикой -->
+    <Border x:Name="Root"
+            Padding="4"
+            CornerRadius="6"
+            Background="{DynamicResource ControlFillColorDefaultBrush}"
+            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+            BorderThickness="1"
+            Width="{Binding ButtonWidth, RelativeSource={RelativeSource AncestorType=controls:ImageButton}}"
+            Height="{Binding ButtonHeight, RelativeSource={RelativeSource AncestorType=controls:ImageButton}}">
+      <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Название -->
+        <TextBlock Grid.Row="0"
+                   Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:ImageButton}}"
+                   FontWeight="Bold" 
+                   HorizontalAlignment="Center" 
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   TextAlignment="Center"
+                   Margin="0,0,0,4"/>
+        
+        <!-- Графическое представление с индикацией состояния -->
+        <Border Grid.Row="1" Margin="0,0,0,4">
           <Grid>
-            <!-- Иконка ON (когда активна и есть IconPathOn) -->
-            <Image Name="IconOn" Stretch="Uniform">
-              <Image.IsVisible>
-                <MultiBinding Converter="{x:Static BoolConverters.And}">
-                  <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" />
-                  <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static ObjectConverters.IsNotNull}" />
-                </MultiBinding>
-              </Image.IsVisible>
-              <Image.Source>
-                <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}">
-                  <Binding.Converter>
-                    <controls:PathToImageConverter/>
-                  </Binding.Converter>
-                </Binding>
-              </Image.Source>
-            </Image>
-            
-            <!-- Иконка OFF (когда не активна и есть IconPathOff) -->
-            <Image Name="IconOff" Stretch="Uniform">
-              <Image.IsVisible>
-                <MultiBinding Converter="{x:Static BoolConverters.And}">
-                  <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static BoolConverters.Not}" />
-                  <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static ObjectConverters.IsNotNull}" />
-                </MultiBinding>
-              </Image.IsVisible>
-              <Image.Source>
-                <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}">
-                  <Binding.Converter>
-                    <controls:PathToImageConverter/>
-                  </Binding.Converter>
-                </Binding>
-              </Image.Source>
-            </Image>
-            
-            <!-- Стандартная графика (если нет иконок) -->
+          <!-- Иконка ON (когда активна и есть IconPathOn) -->
+          <Image Name="IconOn" Stretch="Uniform">
+            <Image.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" />
+                <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static ObjectConverters.IsNotNull}" />
+              </MultiBinding>
+            </Image.IsVisible>
+            <Image.Source>
+              <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}">
+                <Binding.Converter>
+                  <controls:PathToImageConverter/>
+                </Binding.Converter>
+              </Binding>
+            </Image.Source>
+          </Image>
+          
+          <!-- Иконка OFF (когда не активна и есть IconPathOff) -->
+          <Image Name="IconOff" Stretch="Uniform">
+            <Image.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static BoolConverters.Not}" />
+                <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static ObjectConverters.IsNotNull}" />
+              </MultiBinding>
+            </Image.IsVisible>
+            <Image.Source>
+              <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}">
+                <Binding.Converter>
+                  <controls:PathToImageConverter/>
+                </Binding.Converter>
+              </Binding>
+            </Image.Source>
+          </Image>
+          
+          <!-- Стандартная графика (если нет иконок) -->
+          <Viewbox>
+            <Viewbox.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static ObjectConverters.IsNull}" />
+                <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static ObjectConverters.IsNull}" />
+              </MultiBinding>
+            </Viewbox.IsVisible>
             <ContentControl Name="DefaultShape">
-              <ContentControl.IsVisible>
-                <MultiBinding Converter="{x:Static BoolConverters.And}">
-                  <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static ObjectConverters.IsNull}" />
-                  <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static ObjectConverters.IsNull}" />
-                </MultiBinding>
-              </ContentControl.IsVisible>
               <ContentControl.Content>
                 <Binding Path="ImageType" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}">
                   <Binding.Converter>
@@ -74,12 +78,15 @@
                 </Binding>
               </ContentControl.Content>
             </ContentControl>
-          </Grid>
-        </Canvas>
-      </Viewbox>
+          </Viewbox>
+        </Grid>
+      </Border>
       
       <!-- Компактный индикатор состояния -->
-      <Border Height="22" CornerRadius="3" Padding="6,3">
+      <Border Grid.Row="2" 
+              Height="18" 
+              CornerRadius="3" 
+              Padding="4,2">
         <Border.Background>
           <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}">
             <Binding.Converter>
@@ -87,7 +94,7 @@
             </Binding.Converter>
           </Binding>
         </Border.Background>
-        <TextBlock FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center">
+        <TextBlock FontSize="9" FontWeight="SemiBold" HorizontalAlignment="Center">
           <TextBlock.Text>
             <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}">
               <Binding.Converter>
@@ -98,7 +105,47 @@
           <TextBlock.Foreground>White</TextBlock.Foreground>
         </TextBlock>
       </Border>
-    </StackPanel>
+    </Grid>
   </Border>
+  
+  <!-- Маркеры для изменения размера -->
+  <!-- Правый нижний угол -->
+  <Border x:Name="ResizeGripBottomRight"
+          Width="12" 
+          Height="12"
+          Background="DarkGray"
+          Opacity="0.7"
+          CornerRadius="0,0,6,0"
+          Cursor="SizeAll"
+          HorizontalAlignment="Right"
+          VerticalAlignment="Bottom"
+          PointerPressed="OnResizeGripPressed"
+          PointerMoved="OnResizeGripMoved"
+          PointerReleased="OnResizeGripReleased"/>
+          
+  <!-- Правый край -->
+  <Border x:Name="ResizeGripRight"
+          Width="6"
+          Background="Transparent"
+          Cursor="SizeWestEast"
+          HorizontalAlignment="Right"
+          VerticalAlignment="Stretch"
+          Margin="0,6,0,6"
+          PointerPressed="OnResizeGripPressed"
+          PointerMoved="OnResizeGripMoved"
+          PointerReleased="OnResizeGripReleased"/>
+          
+  <!-- Нижний край -->
+  <Border x:Name="ResizeGripBottom"
+          Height="6"
+          Background="Transparent"
+          Cursor="SizeNorthSouth"
+          HorizontalAlignment="Stretch"
+          VerticalAlignment="Bottom"
+          Margin="6,0,6,0"
+          PointerPressed="OnResizeGripPressed"
+          PointerMoved="OnResizeGripMoved"
+          PointerReleased="OnResizeGripReleased"/>
+  </Grid>
   
 </UserControl>

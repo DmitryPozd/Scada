@@ -51,6 +51,8 @@ public class CoilElement : MnemoschemeElement
     public string? ImageType { get; set; } // Для ImageButton: Motor, Valve, Fan, Heater, Light
     public string? IconPathOn { get; set; } // Путь к иконке для состояния ON
     public string? IconPathOff { get; set; } // Путь к иконке для состояния OFF
+    public double? ButtonWidth { get; set; } // Ширина для ImageButton
+    public double? ButtonHeight { get; set; } // Высота для ImageButton
 }
 
 /// <summary>

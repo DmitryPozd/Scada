@@ -58,6 +58,12 @@ public partial class ImageButton : UserControl
     public static readonly StyledProperty<string?> IconPathOffProperty =
         AvaloniaProperty.Register<ImageButton, string?>(nameof(IconPathOff));
 
+    public static readonly StyledProperty<double> ButtonWidthProperty =
+        AvaloniaProperty.Register<ImageButton, double>(nameof(ButtonWidth), defaultValue: 100.0);
+
+    public static readonly StyledProperty<double> ButtonHeightProperty =
+        AvaloniaProperty.Register<ImageButton, double>(nameof(ButtonHeight), defaultValue: 120.0);
+
     public event EventHandler<CoilButtonInfo>? CopyRequested;
     public event EventHandler? PasteRequested;
     public event EventHandler? DeleteRequested; // Событие для удаления элемента
@@ -123,6 +129,18 @@ public partial class ImageButton : UserControl
         set => SetValue(IconPathOffProperty, value);
     }
 
+    public double ButtonWidth
+    {
+        get => GetValue(ButtonWidthProperty);
+        set => SetValue(ButtonWidthProperty, value);
+    }
+
+    public double ButtonHeight
+    {
+        get => GetValue(ButtonHeightProperty);
+        set => SetValue(ButtonHeightProperty, value);
+    }
+
     public ImageButton()
     {
         InitializeComponent();
@@ -137,6 +155,80 @@ public partial class ImageButton : UserControl
                 TagChanged?.Invoke(this, EventArgs.Empty);
             }
         });
+    }
+
+    // Поля для изменения размера
+    private bool _isResizing = false;
+    private Point _resizeStartPoint;
+    private double _resizeStartWidth;
+    private double _resizeStartHeight;
+    private string _resizeMode = ""; // "bottomright", "right", "bottom"
+
+    private void OnResizeGripPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Border grip)
+        {
+            _isResizing = true;
+            _resizeStartPoint = e.GetPosition(this);
+            _resizeStartWidth = ButtonWidth;
+            _resizeStartHeight = ButtonHeight;
+            
+            // Определяем режим изменения размера
+            _resizeMode = grip.Name switch
+            {
+                "ResizeGripBottomRight" => "bottomright",
+                "ResizeGripRight" => "right",
+                "ResizeGripBottom" => "bottom",
+                _ => ""
+            };
+            
+            grip.PointerCaptureLost += OnPointerCaptureLost;
+            e.Pointer.Capture(grip);
+            e.Handled = true;
+        }
+    }
+
+    private void OnResizeGripMoved(object? sender, PointerEventArgs e)
+    {
+        if (_isResizing && sender is Border)
+        {
+            var currentPoint = e.GetPosition(this);
+            var deltaX = currentPoint.X - _resizeStartPoint.X;
+            var deltaY = currentPoint.Y - _resizeStartPoint.Y;
+
+            if (_resizeMode == "bottomright" || _resizeMode == "right")
+            {
+                var newWidth = Math.Max(50, Math.Min(500, _resizeStartWidth + deltaX));
+                ButtonWidth = newWidth;
+            }
+
+            if (_resizeMode == "bottomright" || _resizeMode == "bottom")
+            {
+                var newHeight = Math.Max(50, Math.Min(500, _resizeStartHeight + deltaY));
+                ButtonHeight = newHeight;
+            }
+
+            e.Handled = true;
+        }
+    }
+
+    private void OnResizeGripReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_isResizing && sender is Border grip)
+        {
+            _isResizing = false;
+            grip.PointerCaptureLost -= OnPointerCaptureLost;
+            e.Pointer.Capture(null);
+            
+            // Уведомляем об изменении для сохранения
+            TagChanged?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
+    }
+
+    private void OnPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        _isResizing = false;
     }
 
     private void OnToggleClick(object? sender, RoutedEventArgs e)
@@ -331,6 +423,33 @@ public partial class ImageButton : UserControl
         stack.Children.Add(iconOffTextBlock);
         stack.Children.Add(iconOffPanel);
 
+        // Размеры кнопки
+        var sizeTextBlock = new TextBlock { Text = "Размеры кнопки (пиксели):", FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 10, 0, 0) };
+        stack.Children.Add(sizeTextBlock);
+        
+        var sizePanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10 };
+        sizePanel.Children.Add(new TextBlock { Text = "Ширина:", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var widthInput = new NumericUpDown 
+        { 
+            Minimum = 50, 
+            Maximum = 500, 
+            Value = (decimal)ButtonWidth, 
+            Width = 120,
+            Increment = 10
+        };
+        sizePanel.Children.Add(widthInput);
+        sizePanel.Children.Add(new TextBlock { Text = "Высота:", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0) });
+        var heightInput = new NumericUpDown 
+        { 
+            Minimum = 50, 
+            Maximum = 500, 
+            Value = (decimal)ButtonHeight, 
+            Width = 120,
+            Increment = 10
+        };
+        sizePanel.Children.Add(heightInput);
+        stack.Children.Add(sizePanel);
+
         // Разделитель
         stack.Children.Add(new Separator { Margin = new Thickness(0, 5, 0, 5) });
 
@@ -419,7 +538,7 @@ public partial class ImageButton : UserControl
         else
         {
             // Показываем выбор тега
-            ShowTagSelectionInDialog(stack, dialog, labelInput, iconOnInput, iconOffInput);
+            ShowTagSelectionInDialog(stack, dialog, labelInput, iconOnInput, iconOffInput, widthInput, heightInput);
         }
         
         scrollViewer.Content = stack;
@@ -431,7 +550,7 @@ public partial class ImageButton : UserControl
         }
     }
 
-    private void ShowTagSelectionInDialog(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput)
+    private void ShowTagSelectionInDialog(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput, NumericUpDown widthInput, NumericUpDown heightInput)
     {
         var label = new TextBlock 
         { 
@@ -495,6 +614,12 @@ public partial class ImageButton : UserControl
             // Сохраняем иконки ON/OFF
             IconPathOn = !string.IsNullOrWhiteSpace(iconOnInput.Text) ? iconOnInput.Text : null;
             IconPathOff = !string.IsNullOrWhiteSpace(iconOffInput.Text) ? iconOffInput.Text : null;
+            
+            // Сохраняем размеры
+            if (widthInput.Value.HasValue)
+                ButtonWidth = (double)widthInput.Value.Value;
+            if (heightInput.Value.HasValue)
+                ButtonHeight = (double)heightInput.Value.Value;
             
             if (combo.SelectedItem is ComboBoxItem item && item.Tag is TagDefinition selectedTag)
             {
