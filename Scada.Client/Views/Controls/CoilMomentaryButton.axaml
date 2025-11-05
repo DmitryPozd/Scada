@@ -2,13 +2,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:Scada.Client.Views.Controls"
              x:Class="Scada.Client.Views.Controls.CoilMomentaryButton"
-             Width="90" Height="100">
+             Width="{Binding ButtonWidth, RelativeSource={RelativeSource Self}}"
+             Height="{Binding ButtonHeight, RelativeSource={RelativeSource Self}}">
   
-  <!-- Кнопка без фиксации (нажал-включил, отпустил-выключил) -->
-  <Border x:Name="MainButton"
-          Padding="8"
-          CornerRadius="8"
-          Background="{DynamicResource ControlFillColorDefaultBrush}"
+  <Grid>
+    <!-- Кнопка без фиксации (нажал-включил, отпустил-выключил) -->
+    <Border x:Name="MainButton"
+            Padding="4"
+            CornerRadius="6"
+            Background="{DynamicResource ControlFillColorDefaultBrush}"
           BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
           BorderThickness="1"
           Cursor="Hand">
@@ -114,5 +116,45 @@
       </TextBlock>
     </StackPanel>
   </Border>
+  
+  <!-- Маркеры для изменения размера -->
+  <!-- Правый нижний угол -->
+  <Border x:Name="ResizeGripBottomRight"
+          Width="12" 
+          Height="12"
+          Background="DarkGray"
+          Opacity="0.7"
+          CornerRadius="0,0,6,0"
+          Cursor="SizeAll"
+          HorizontalAlignment="Right"
+          VerticalAlignment="Bottom"
+          PointerPressed="OnResizeGripPressed"
+          PointerMoved="OnResizeGripMoved"
+          PointerReleased="OnResizeGripReleased"/>
+          
+  <!-- Правый край -->
+  <Border x:Name="ResizeGripRight"
+          Width="6"
+          Background="Transparent"
+          Cursor="SizeWestEast"
+          HorizontalAlignment="Right"
+          VerticalAlignment="Stretch"
+          Margin="0,6,0,6"
+          PointerPressed="OnResizeGripPressed"
+          PointerMoved="OnResizeGripMoved"
+          PointerReleased="OnResizeGripReleased"/>
+          
+  <!-- Нижний край -->
+  <Border x:Name="ResizeGripBottom"
+          Height="6"
+          Background="Transparent"
+          Cursor="SizeNorthSouth"
+          HorizontalAlignment="Stretch"
+          VerticalAlignment="Bottom"
+          Margin="6,0,6,0"
+          PointerPressed="OnResizeGripPressed"
+          PointerMoved="OnResizeGripMoved"
+          PointerReleased="OnResizeGripReleased"/>
+  </Grid>
   
 </UserControl>

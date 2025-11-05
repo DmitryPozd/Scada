@@ -48,6 +48,12 @@ public partial class CoilMomentaryButton : UserControl
     public static readonly StyledProperty<string?> IconPathOffProperty =
         AvaloniaProperty.Register<CoilMomentaryButton, string?>(nameof(IconPathOff));
 
+    public static readonly StyledProperty<double> ButtonWidthProperty =
+        AvaloniaProperty.Register<CoilMomentaryButton, double>(nameof(ButtonWidth), defaultValue: 100.0);
+
+    public static readonly StyledProperty<double> ButtonHeightProperty =
+        AvaloniaProperty.Register<CoilMomentaryButton, double>(nameof(ButtonHeight), defaultValue: 100.0);
+
     public event EventHandler<CoilButtonInfo>? CopyRequested;
     public event EventHandler? PasteRequested;
     public event EventHandler? DeleteRequested; // Событие для удаления элемента
@@ -107,6 +113,18 @@ public partial class CoilMomentaryButton : UserControl
         set => SetValue(IconPathOffProperty, value);
     }
 
+    public double ButtonWidth
+    {
+        get => GetValue(ButtonWidthProperty);
+        set => SetValue(ButtonWidthProperty, value);
+    }
+
+    public double ButtonHeight
+    {
+        get => GetValue(ButtonHeightProperty);
+        set => SetValue(ButtonHeightProperty, value);
+    }
+
     public CoilMomentaryButton()
     {
         InitializeComponent();
@@ -121,6 +139,83 @@ public partial class CoilMomentaryButton : UserControl
                 TagChanged?.Invoke(this, EventArgs.Empty);
             }
         });
+    }
+
+    // Переменные для изменения размера
+    private bool _isResizing = false;
+    private Point _resizeStartPoint;
+    private double _resizeStartWidth;
+    private double _resizeStartHeight;
+    private string _resizeMode = "";
+
+    private void OnResizeGripPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Border grip)
+        {
+            _isResizing = true;
+            _resizeStartPoint = e.GetPosition(this);
+            _resizeStartWidth = ButtonWidth;
+            _resizeStartHeight = ButtonHeight;
+            
+            // Определяем режим изменения размера
+            if (grip.Name == "ResizeGripBottomRight")
+                _resizeMode = "bottomright";
+            else if (grip.Name == "ResizeGripRight")
+                _resizeMode = "right";
+            else if (grip.Name == "ResizeGripBottom")
+                _resizeMode = "bottom";
+            
+            e.Pointer.Capture(grip);
+            e.Handled = true;
+        }
+    }
+
+    private void OnResizeGripMoved(object? sender, PointerEventArgs e)
+    {
+        if (_isResizing && sender is Border grip)
+        {
+            var currentPoint = e.GetPosition(this);
+            var deltaX = currentPoint.X - _resizeStartPoint.X;
+            var deltaY = currentPoint.Y - _resizeStartPoint.Y;
+
+            if (_resizeMode == "bottomright")
+            {
+                // Изменение по обеим осям
+                var newWidth = Math.Max(50, Math.Min(500, _resizeStartWidth + deltaX));
+                var newHeight = Math.Max(50, Math.Min(500, _resizeStartHeight + deltaY));
+                ButtonWidth = newWidth;
+                ButtonHeight = newHeight;
+            }
+            else if (_resizeMode == "right")
+            {
+                // Изменение только по ширине
+                var newWidth = Math.Max(50, Math.Min(500, _resizeStartWidth + deltaX));
+                ButtonWidth = newWidth;
+            }
+            else if (_resizeMode == "bottom")
+            {
+                // Изменение только по высоте
+                var newHeight = Math.Max(50, Math.Min(500, _resizeStartHeight + deltaY));
+                ButtonHeight = newHeight;
+            }
+
+            e.Handled = true;
+        }
+    }
+
+    private void OnResizeGripReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_isResizing)
+        {
+            _isResizing = false;
+            if (sender is Border grip)
+            {
+                e.Pointer.Capture(null);
+            }
+            // Уведомляем об изменении для сохранения настроек
+            TagChanged?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
     }
 
     private void OnPointerPressedHandler(object? sender, PointerPressedEventArgs e)

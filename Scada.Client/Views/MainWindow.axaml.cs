@@ -296,7 +296,9 @@ public partial class MainWindow : Window
                         CoilAddress = coilElem.CoilAddress,
                         AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags),
                         IconPathOn = coilElem.IconPathOn,
-                        IconPathOff = coilElem.IconPathOff
+                        IconPathOff = coilElem.IconPathOff,
+                        ButtonWidth = coilElem.ButtonWidth ?? 100.0,
+                        ButtonHeight = coilElem.ButtonHeight ?? 100.0
                     };
                     if (!string.IsNullOrEmpty(coilElem.TagName))
                     {
@@ -325,7 +327,9 @@ public partial class MainWindow : Window
                         CoilAddress = momentaryElem.CoilAddress,
                         AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags),
                         IconPathOn = momentaryElem.IconPathOn,
-                        IconPathOff = momentaryElem.IconPathOff
+                        IconPathOff = momentaryElem.IconPathOff,
+                        ButtonWidth = momentaryElem.ButtonWidth ?? 100.0,
+                        ButtonHeight = momentaryElem.ButtonHeight ?? 100.0
                     };
                     if (!string.IsNullOrEmpty(momentaryElem.TagName))
                     {
@@ -864,7 +868,9 @@ public partial class MainWindow : Window
                     CoilAddress = coilBtn.CoilAddress,
                     TagName = coilBtn.SelectedTag?.Name,
                     IconPathOn = coilBtn.IconPathOn,
-                    IconPathOff = coilBtn.IconPathOff
+                    IconPathOff = coilBtn.IconPathOff,
+                    ButtonWidth = coilBtn.ButtonWidth,
+                    ButtonHeight = coilBtn.ButtonHeight
                 };
             }
             else if (element is CoilMomentaryButton momentaryBtn)
@@ -878,7 +884,9 @@ public partial class MainWindow : Window
                     CoilAddress = momentaryBtn.CoilAddress,
                     TagName = momentaryBtn.SelectedTag?.Name,
                     IconPathOn = momentaryBtn.IconPathOn,
-                    IconPathOff = momentaryBtn.IconPathOff
+                    IconPathOff = momentaryBtn.IconPathOff,
+                    ButtonWidth = momentaryBtn.ButtonWidth,
+                    ButtonHeight = momentaryBtn.ButtonHeight
                 };
             }
             else if (element is ImageButton imgBtn)
