@@ -24,7 +24,7 @@
                  TextAlignment="Center"/>
       
       <!-- Визуальный индикатор состояния -->
-      <Border Width="50" Height="50" CornerRadius="6" BorderThickness="2">
+      <Border CornerRadius="6" BorderThickness="2" Margin="5">
         <Border.BorderBrush>
           <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilMomentaryButton}">
             <Binding.Converter>
