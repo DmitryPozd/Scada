@@ -672,7 +672,7 @@ public partial class CoilMomentaryButton : UserControl
 public class MomentaryStateTextConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is bool b && b ? "НАЖАТА" : "ОТПУЩЕНА";
+        => value is bool b && b ? "ON" : "OFF";
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
 }

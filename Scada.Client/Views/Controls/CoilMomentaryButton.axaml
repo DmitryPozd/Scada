@@ -105,7 +105,7 @@
       </Border>
       
       <!-- Текстовый индикатор -->
-      <TextBlock FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center">
+      <TextBlock FontSize="9" FontWeight="SemiBold" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis">
         <TextBlock.Text>
           <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilMomentaryButton}">
             <Binding.Converter>
