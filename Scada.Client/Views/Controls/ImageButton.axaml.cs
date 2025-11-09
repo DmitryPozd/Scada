@@ -64,6 +64,9 @@ public partial class ImageButton : UserControl
     public static readonly StyledProperty<double> ButtonHeightProperty =
         AvaloniaProperty.Register<ImageButton, double>(nameof(ButtonHeight), defaultValue: 120.0);
 
+    public static readonly StyledProperty<CoilButtonType> ButtonTypeProperty =
+        AvaloniaProperty.Register<ImageButton, CoilButtonType>(nameof(ButtonType), defaultValue: CoilButtonType.Toggle);
+
     public event EventHandler<CoilButtonInfo>? CopyRequested;
     public event EventHandler? PasteRequested;
     public event EventHandler? DeleteRequested; // Событие для удаления элемента
@@ -141,6 +144,12 @@ public partial class ImageButton : UserControl
         set => SetValue(ButtonHeightProperty, value);
     }
 
+    public CoilButtonType ButtonType
+    {
+        get => GetValue(ButtonTypeProperty);
+        set => SetValue(ButtonTypeProperty, value);
+    }
+
     public ImageButton()
     {
         InitializeComponent();
@@ -155,6 +164,93 @@ public partial class ImageButton : UserControl
                 TagChanged?.Invoke(this, EventArgs.Empty);
             }
         });
+    }
+
+    // Поля для обработки кликов
+    private bool _isMomentaryPressed = false;
+    private Point _pressStartPoint;
+    private bool _wasPressed = false;
+
+    // Обработчики для моментальной кнопки
+    private void OnMainButtonPressed(object? sender, PointerPressedEventArgs e)
+    {
+        // Игнорируем не левую кнопку мыши (правый клик для контекстного меню)
+        var properties = e.GetCurrentPoint(this).Properties;
+        if (!properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        _pressStartPoint = e.GetPosition(this);
+        _wasPressed = true;
+
+        if (ButtonType == CoilButtonType.Momentary && !_isMomentaryPressed)
+        {
+            _isMomentaryPressed = true;
+            // Активируем катушку
+            if (OnCommand?.CanExecute(null) == true)
+            {
+                OnCommand.Execute(null);
+            }
+            // НЕ устанавливаем e.Handled = true для возможности перетаскивания
+        }
+        else if (ButtonType == CoilButtonType.Toggle)
+        {
+            // Для Toggle только запоминаем, что была нажата
+            // НЕ устанавливаем e.Handled = true для возможности перетаскивания
+        }
+    }
+
+    private void OnMainButtonReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        // Игнорируем не левую кнопку мыши
+        if (e.InitialPressMouseButton != MouseButton.Left)
+        {
+            return;
+        }
+
+        if (ButtonType == CoilButtonType.Momentary && _isMomentaryPressed)
+        {
+            _isMomentaryPressed = false;
+            // Деактивируем катушку
+            if (OffCommand?.CanExecute(null) == true)
+            {
+                OffCommand.Execute(null);
+            }
+            // НЕ устанавливаем e.Handled = true для возможности перетаскивания
+        }
+        else if (ButtonType == CoilButtonType.Toggle && _wasPressed)
+        {
+            // Проверяем, что это был клик, а не перетаскивание
+            var releasePoint = e.GetPosition(this);
+            var distance = Math.Sqrt(
+                Math.Pow(releasePoint.X - _pressStartPoint.X, 2) +
+                Math.Pow(releasePoint.Y - _pressStartPoint.Y, 2)
+            );
+
+            // Если курсор сместился меньше чем на 5 пикселей - это клик
+            if (distance < 5)
+            {
+                // Переключаем состояние
+                if (IsActive)
+                {
+                    if (OffCommand?.CanExecute(null) == true)
+                    {
+                        OffCommand.Execute(null);
+                    }
+                }
+                else
+                {
+                    if (OnCommand?.CanExecute(null) == true)
+                    {
+                        OnCommand.Execute(null);
+                    }
+                }
+            }
+            // НЕ устанавливаем e.Handled = true для возможности перетаскивания
+        }
+
+        _wasPressed = false;
     }
 
     // Поля для изменения размера
@@ -450,6 +546,19 @@ public partial class ImageButton : UserControl
         sizePanel.Children.Add(heightInput);
         stack.Children.Add(sizePanel);
 
+        // Поле для выбора типа кнопки
+        var buttonTypeTextBlock = new TextBlock { Text = "Тип кнопки:", FontWeight = FontWeight.SemiBold };
+        var buttonTypeCombo = new ComboBox
+        {
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch
+        };
+        buttonTypeCombo.Items.Add(new ComboBoxItem { Content = "С фиксацией (переключатель)", Tag = CoilButtonType.Toggle });
+        buttonTypeCombo.Items.Add(new ComboBoxItem { Content = "Моментальная (удержание)", Tag = CoilButtonType.Momentary });
+        buttonTypeCombo.SelectedIndex = ButtonType == CoilButtonType.Toggle ? 0 : 1;
+        
+        stack.Children.Add(buttonTypeTextBlock);
+        stack.Children.Add(buttonTypeCombo);
+
         // Разделитель
         stack.Children.Add(new Separator { Margin = new Thickness(0, 5, 0, 5) });
 
@@ -533,12 +642,12 @@ public partial class ImageButton : UserControl
         if (AvailableTags == null || !AvailableTags.Any())
         {
             // Если тегов нет, показываем простой ввод адреса
-            await ShowSimpleAddressDialogInStack(stack, dialog, labelInput, iconOnInput, iconOffInput);
+            await ShowSimpleAddressDialogInStack(stack, dialog, labelInput, iconOnInput, iconOffInput, buttonTypeCombo);
         }
         else
         {
             // Показываем выбор тега
-            ShowTagSelectionInDialog(stack, dialog, labelInput, iconOnInput, iconOffInput, widthInput, heightInput);
+            ShowTagSelectionInDialog(stack, dialog, labelInput, iconOnInput, iconOffInput, widthInput, heightInput, buttonTypeCombo);
         }
         
         scrollViewer.Content = stack;
@@ -550,7 +659,7 @@ public partial class ImageButton : UserControl
         }
     }
 
-    private void ShowTagSelectionInDialog(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput, NumericUpDown widthInput, NumericUpDown heightInput)
+    private void ShowTagSelectionInDialog(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput, NumericUpDown widthInput, NumericUpDown heightInput, ComboBox buttonTypeCombo)
     {
         var label = new TextBlock 
         { 
@@ -621,6 +730,12 @@ public partial class ImageButton : UserControl
             if (heightInput.Value.HasValue)
                 ButtonHeight = (double)heightInput.Value.Value;
             
+            // Сохраняем тип кнопки
+            if (buttonTypeCombo.SelectedItem is ComboBoxItem typeItem && typeItem.Tag is CoilButtonType selectedType)
+            {
+                ButtonType = selectedType;
+            }
+            
             if (combo.SelectedItem is ComboBoxItem item && item.Tag is TagDefinition selectedTag)
             {
                 SelectedTag = selectedTag;
@@ -640,7 +755,7 @@ public partial class ImageButton : UserControl
         stack.Children.Add(buttons);
     }
 
-    private System.Threading.Tasks.Task ShowSimpleAddressDialogInStack(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput)
+    private System.Threading.Tasks.Task ShowSimpleAddressDialogInStack(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput, ComboBox buttonTypeCombo)
     {
         var label = new TextBlock 
         { 
@@ -676,6 +791,12 @@ public partial class ImageButton : UserControl
             // Сохранить пути к иконкам
             IconPathOn = !string.IsNullOrWhiteSpace(iconOnInput.Text) ? iconOnInput.Text : null;
             IconPathOff = !string.IsNullOrWhiteSpace(iconOffInput.Text) ? iconOffInput.Text : null;
+            
+            // Сохраняем тип кнопки
+            if (buttonTypeCombo.SelectedItem is ComboBoxItem typeItem && typeItem.Tag is CoilButtonType selectedType)
+            {
+                ButtonType = selectedType;
+            }
             
             dialog.Close();
         };

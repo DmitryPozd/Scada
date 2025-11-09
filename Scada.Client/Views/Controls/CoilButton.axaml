@@ -13,7 +13,9 @@
             Background="{DynamicResource ControlFillColorDefaultBrush}"
             BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
             BorderThickness="1"
-            Cursor="Hand">
+            Cursor="Hand"
+            PointerPressed="OnMainButtonPressed"
+            PointerReleased="OnMainButtonReleased">
     <StackPanel Spacing="6" HorizontalAlignment="Center">
       <!-- Название -->
       <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:CoilButton}}"

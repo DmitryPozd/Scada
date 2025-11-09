@@ -12,7 +12,9 @@
             BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
             BorderThickness="1"
             Width="{Binding ButtonWidth, RelativeSource={RelativeSource AncestorType=controls:ImageButton}}"
-            Height="{Binding ButtonHeight, RelativeSource={RelativeSource AncestorType=controls:ImageButton}}">
+            Height="{Binding ButtonHeight, RelativeSource={RelativeSource AncestorType=controls:ImageButton}}"
+            PointerPressed="OnMainButtonPressed"
+            PointerReleased="OnMainButtonReleased">
       <Grid RowDefinitions="Auto,*,Auto">
         <!-- Название -->
         <TextBlock Grid.Row="0"

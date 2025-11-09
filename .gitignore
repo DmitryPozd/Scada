@@ -70,3 +70,7 @@ $RECYCLE.BIN/
 *.exe
 *.pdb
 *.cache
+
+# Temporary editor files
+*.ddwnld*
+.disko*

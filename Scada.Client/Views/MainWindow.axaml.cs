@@ -294,6 +294,7 @@ public partial class MainWindow : Window
                     {
                         Label = coilElem.Label,
                         CoilAddress = coilElem.CoilAddress,
+                        ButtonType = coilElem.ButtonType,
                         AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags),
                         IconPathOn = coilElem.IconPathOn,
                         IconPathOff = coilElem.IconPathOff,
@@ -358,6 +359,7 @@ public partial class MainWindow : Window
                         {
                             Label = imgElem.Label,
                             CoilAddress = imgElem.CoilAddress,
+                            ButtonType = imgElem.ButtonType,
                             ImageType = imgType,
                             AvailableTags = GetFilteredTagsForImageButton(vm.ConnectionConfig.Tags),
                             IconPathOn = imgElem.IconPathOn,
@@ -873,6 +875,7 @@ public partial class MainWindow : Window
                     Label = coilBtn.Label,
                     CoilAddress = coilBtn.CoilAddress,
                     TagName = coilBtn.SelectedTag?.Name,
+                    ButtonType = coilBtn.ButtonType,
                     IconPathOn = coilBtn.IconPathOn,
                     IconPathOff = coilBtn.IconPathOff,
                     ButtonWidth = coilBtn.ButtonWidth,
@@ -889,6 +892,7 @@ public partial class MainWindow : Window
                     Label = momentaryBtn.Label,
                     CoilAddress = momentaryBtn.CoilAddress,
                     TagName = momentaryBtn.SelectedTag?.Name,
+                    ButtonType = CoilButtonType.Momentary, // CoilMomentaryButton всегда Momentary
                     IconPathOn = momentaryBtn.IconPathOn,
                     IconPathOff = momentaryBtn.IconPathOff,
                     ButtonWidth = momentaryBtn.ButtonWidth,
@@ -905,6 +909,7 @@ public partial class MainWindow : Window
                     Label = imgBtn.Label,
                     CoilAddress = imgBtn.CoilAddress,
                     TagName = imgBtn.SelectedTag?.Name,
+                    ButtonType = imgBtn.ButtonType,
                     ImageType = imgBtn.ImageType.ToString(),
                     IconPathOn = imgBtn.IconPathOn,
                     IconPathOff = imgBtn.IconPathOff,

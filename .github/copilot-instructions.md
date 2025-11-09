@@ -17,10 +17,10 @@ Avalonia UI desktop SCADA application for Modbus TCP controller communication. B
 **Project structure**:
 ```
 Scada.Client/
-├── Models/          ModbusConnectionConfig, TagDefinition, TagEnums (RegisterType, DataType, WordOrder), CoilButtonInfo, MnemoschemeElement hierarchy, TagsConfiguration
+├── Models/          ModbusConnectionConfig, TagDefinition, TagEnums (RegisterType, DataType, WordOrder), CoilButtonInfo, CoilButtonType, MnemoschemeElement hierarchy, TagsConfiguration
 ├── ViewModels/      ViewModelBase, MainWindowViewModel, SettingsWindowViewModel, TagsEditorWindowViewModel
 ├── Views/           MainWindow.axaml, SettingsWindow.axaml, TagsEditorWindow.axaml
-│   └── Controls/    PumpControl, ValveControl, SensorIndicator, CoilButton, ImageButton, DraggableControl (mnemoscheme UI components)
+│   └── Controls/    PumpControl, ValveControl, SensorIndicator, CoilButton (unified with ButtonType), ImageButton, DraggableControl (mnemoscheme UI components)
 └── Services/        IModbusClientService, ModbusClientService, ISettingsService, SettingsService, ITagsConfigService, TagsConfigService
 ```
 
@@ -203,10 +203,23 @@ public bool IsRunning
 - **Opening editor**: MainWindow creates `TagsConfigService` instance, passes to ViewModel constructor
 - **Saving changes**: `editorVm.ActiveTags` copied to `mainVm.ConnectionConfig.Tags` on dialog close with result=true
 
+**Button Type unification pattern** (see `CoilButton`, `ImageButton`, `CoilButtonType` enum):
+- **CoilButtonType enum**: Toggle (с фиксацией) = 0, Momentary (моментальная) = 1
+- **Unified CoilButton**: single control replaces separate CoilButton and CoilMomentaryButton
+- **ButtonType property**: StyledProperty<CoilButtonType> with default Toggle
+- **Toggle behavior**: Click switches ON/OFF state via OnCommand/OffCommand
+- **Momentary behavior**: Active only while pressed (PointerPressed → ON, PointerReleased → OFF)
+- **Context menu selection**: ComboBox in settings dialog allows switching between "С фиксацией (переключатель)" and "Моментальная (удержание)"
+- **Persistence**: ButtonType saved in CoilElement, restored from settings.json
+- **Implementation**: OnMainButtonPressed/Released handlers check ButtonType and execute appropriate logic
+- **ImageButton support**: Same ButtonType property and handlers for image-based buttons
+- **Field tracking**: _isMomentaryPressed bool field prevents double-execution
+
 ## Notes for agents
 
 - Always run `dotnet build` after file edits to catch errors early.
 - When adding Modbus operations, remember FluentModbus returns `Span<byte>`, not `ushort[]`.
 - **Active tags concept**: users select specific tags via `TagsEditorWindow`, only those are polled (performance optimization).
 - **Tag range syntax**: `<Prefix><Start>-<Prefix><End>` (e.g., `Y0-Y50`), validated by prefix match and start≤end.
+- **Button Type**: CoilButton and ImageButton now unified with ButtonType property (Toggle/Momentary) - no need for separate CoilMomentaryButton.
 - Update this file when new patterns emerge (DI container, config file, logging, etc.).

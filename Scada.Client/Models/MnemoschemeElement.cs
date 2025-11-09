@@ -48,6 +48,7 @@ public class CoilElement : MnemoschemeElement
 {
     public ushort CoilAddress { get; set; }
     public string? TagName { get; set; }
+    public CoilButtonType ButtonType { get; set; } = CoilButtonType.Toggle; // Тип кнопки: Toggle или Momentary
     public string? ImageType { get; set; } // Для ImageButton: Motor, Valve, Fan, Heater, Light
     public string? IconPathOn { get; set; } // Путь к иконке для состояния ON
     public string? IconPathOff { get; set; } // Путь к иконке для состояния OFF
