@@ -11,76 +11,97 @@
         Width="1920" Height="1080"
         Closing="OnWindowClosing">
     
-    <Grid RowDefinitions="Auto,*,Auto" Margin="10">
-        <!-- Connection Status Bar -->
+    <Grid RowDefinitions="Auto,*" Margin="10">
+        <!-- Unified Top Bar - Status + Actions -->
         <Border Grid.Row="0" 
                 Background="{DynamicResource AccentFillColorDefaultBrush}" 
-                Padding="10" 
-                CornerRadius="5" 
+                Padding="6" 
+                CornerRadius="3" 
                 Margin="0,0,0,10">
-            <Grid ColumnDefinitions="*,Auto,Auto">
-                <TextBlock Text="{Binding ConnectionStatus}" 
-                           Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" 
-                           VerticalAlignment="Center" 
-                           FontSize="14"/>
-                <Button Grid.Column="1" Content="Подключить" Command="{Binding ConnectCommand}" 
-                        IsEnabled="{Binding !IsConnected}" Margin="5,0" Padding="15,5"/>
-                <Button Grid.Column="2" Content="Отключить" Command="{Binding DisconnectCommand}" 
-                        IsEnabled="{Binding IsConnected}" Padding="15,5"/>
+            <Grid ColumnDefinitions="*,Auto">
+                <!-- Left side: Status and Connection -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding ConnectionStatus}" 
+                               Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" 
+                               VerticalAlignment="Center" 
+                               FontSize="11"/>
+                    <Button Content="Подключить" Command="{Binding ConnectCommand}" 
+                            IsEnabled="{Binding !IsConnected}" Padding="8,2" FontSize="11" Height="24"/>
+                    <Button Content="Отключить" Command="{Binding DisconnectCommand}" 
+                            IsEnabled="{Binding IsConnected}" Padding="8,2" FontSize="11" Height="24"/>
+                </StackPanel>
+                
+                <!-- Right side: Actions -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                    <Button Content="Добавить элемент" Click="OnAddElementButtonClick" Padding="8,2" FontSize="11" Height="24"/>
+                    <Button Content="Редактор тегов" Command="{Binding OpenTagsEditorCommand}" Padding="8,2" FontSize="11" Height="24"/>
+                    <Button Content="Настройки" Command="{Binding OpenSettingsCommand}" Padding="8,2" FontSize="11" Height="24"/>
+                </StackPanel>
             </Grid>
         </Border>
 
-        <!-- Main Content - Mnemoscheme Area -->
-        <Border Grid.Row="1" 
-                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" 
-                BorderThickness="2" 
-                CornerRadius="5" 
-                Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
-            <Grid RowDefinitions="Auto,*">
-                <!-- Toolbar -->
-                <Border Grid.Row="0" 
-                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" 
-                        BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}" 
-                        BorderThickness="0,0,0,1" 
-                        Padding="10">
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="Мнемосхема SCADA - перемещайте элементы мышью" FontSize="16" FontWeight="Bold"/>
+        <!-- Main Content - Split Toolbar and Mnemoscheme -->
+        <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*" RowSpacing="0">
+            <!-- Toolbar Section -->
+            <Border Grid.Row="0" 
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" 
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" 
+                    BorderThickness="2,2,2,0" 
+                    CornerRadius="5,5,0,0" 
+                    Padding="8">
+                <StackPanel Spacing="5">
+                    <TextBlock Text="Панель инструментов" FontSize="12" FontWeight="SemiBold"/>
+                    
+                    <!-- Test Register Read -->
+                    <Grid ColumnDefinitions="Auto,150,Auto,100,Auto,60" RowDefinitions="Auto,Auto">
+                        <TextBlock Grid.Column="0" Text="Тег:" VerticalAlignment="Center" Margin="0,0,5,0" FontSize="11"/>
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding ConnectionConfig.Tags}"
+                                  SelectedItem="{Binding SelectedTag}"
+                                  MinWidth="120"
+                                  Height="26"
+                                  FontSize="11">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <TextBlock Grid.Column="2" Text="Адрес:" VerticalAlignment="Center" Margin="8,0,5,0" FontSize="11"/>
+                        <NumericUpDown Grid.Column="3" Value="{Binding RegisterAddress}"
+                                       Minimum="0" Maximum="65535" Increment="1"
+                                       Height="26"
+                                       FontSize="11"/>
+
+                        <Button Grid.Column="4" Content="Читать" Command="{Binding ReadRegisterCommand}"
+                                Margin="8,0" Padding="10,3" FontSize="11" Height="26"/>
+                        <TextBlock Grid.Column="5" Text="{Binding RegisterValue}"
+                                   VerticalAlignment="Center" FontSize="12" FontWeight="Bold"/>
                         
-                        <!-- Test Register Read -->
-                        <Grid ColumnDefinitions="Auto,200,Auto,150,Auto,100" RowDefinitions="Auto,Auto">
-                            <TextBlock Grid.Column="0" Text="Тег:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <ComboBox Grid.Column="1"
-                                      ItemsSource="{Binding ConnectionConfig.Tags}"
-                                      SelectedItem="{Binding SelectedTag}"
-                                      MinWidth="180">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Name}"/>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                        <!-- Coil write controls -->
+                        <StackPanel Grid.Row="1" Grid.ColumnSpan="6" Orientation="Horizontal" Spacing="5" Margin="0,5,0,0">
+                            <TextBlock Text="Coil запись:" VerticalAlignment="Center" FontSize="11"/>
+                            <Button Content="ON" Command="{Binding CoilOnCommand}" Padding="8,2" FontSize="11" Height="24"/>
+                            <Button Content="OFF" Command="{Binding CoilOffCommand}" Padding="8,2" FontSize="11" Height="24"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            
+            <!-- Separator line - яркая полоса разделителя -->
+            <Rectangle Grid.Row="1" 
+                       Fill="#2196F3" 
+                       Height="1"
+                       Margin="0,0,0,10"/>
 
-                            <TextBlock Grid.Column="2" Text="Адрес:" VerticalAlignment="Center" Margin="15,0,10,0"/>
-                            <NumericUpDown Grid.Column="3" Value="{Binding RegisterAddress}"
-                                           Minimum="0" Maximum="65535" Increment="1"/>
-
-                            <Button Grid.Column="4" Content="Читать" Command="{Binding ReadRegisterCommand}"
-                                    Margin="10,0" Padding="15,5"/>
-                            <TextBlock Grid.Column="5" Text="{Binding RegisterValue}"
-                                       VerticalAlignment="Center" FontSize="16" FontWeight="Bold"/>
-                            
-                            <!-- Coil write controls -->
-                            <StackPanel Grid.Row="1" Grid.ColumnSpan="6" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                                <TextBlock Text="Coil запись:" VerticalAlignment="Center"/>
-                                <Button Content="ON" Command="{Binding CoilOnCommand}" Padding="12,4"/>
-                                <Button Content="OFF" Command="{Binding CoilOffCommand}" Padding="12,4"/>
-                            </StackPanel>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-
-                <!-- Canvas for Mnemoscheme with overlay for right-click detection -->
-                <Grid Grid.Row="1">
+            <!-- Mnemoscheme Canvas Section -->
+            <Border Grid.Row="2" 
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" 
+                    BorderThickness="2" 
+                    CornerRadius="5" 
+                    Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
+                <Grid>
                     <Canvas x:Name="MnemoCanvas" 
                             Background="{DynamicResource LayerFillColorDefaultBrush}" 
                             ClipToBounds="True">
@@ -197,14 +218,7 @@
                             Background="Transparent"
                             IsHitTestVisible="False"/>
                 </Grid>
-            </Grid>
-        </Border>
-
-        <!-- Bottom Action Bar -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0" Spacing="10">
-            <Button Content="Добавить элемент" Click="OnAddElementButtonClick" Padding="15,5"/>
-            <Button Content="Редактор тегов" Command="{Binding OpenTagsEditorCommand}" Padding="15,5"/>
-            <Button Content="Настройки" Command="{Binding OpenSettingsCommand}" Padding="15,5"/>
-        </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </Window>
