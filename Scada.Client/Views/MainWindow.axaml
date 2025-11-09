@@ -26,16 +26,21 @@
                                VerticalAlignment="Center" 
                                FontSize="11"/>
                     <Button Content="Подключить" Command="{Binding ConnectCommand}" 
-                            IsEnabled="{Binding !IsConnected}" Padding="8,2" FontSize="11" Height="24"/>
+                            IsEnabled="{Binding !IsConnected}" Padding="8,4" FontSize="12" FontWeight="SemiBold" 
+                            Height="28" VerticalContentAlignment="Center"/>
                     <Button Content="Отключить" Command="{Binding DisconnectCommand}" 
-                            IsEnabled="{Binding IsConnected}" Padding="8,2" FontSize="11" Height="24"/>
+                            IsEnabled="{Binding IsConnected}" Padding="8,4" FontSize="12" FontWeight="SemiBold" 
+                            Height="28" VerticalContentAlignment="Center"/>
                 </StackPanel>
                 
                 <!-- Right side: Actions -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                    <Button Content="Добавить элемент" Click="OnAddElementButtonClick" Padding="8,2" FontSize="11" Height="24"/>
-                    <Button Content="Редактор тегов" Command="{Binding OpenTagsEditorCommand}" Padding="8,2" FontSize="11" Height="24"/>
-                    <Button Content="Настройки" Command="{Binding OpenSettingsCommand}" Padding="8,2" FontSize="11" Height="24"/>
+                    <Button Content="Добавить элемент" Click="OnAddElementButtonClick" Padding="8,4" FontSize="12" FontWeight="SemiBold" 
+                            Height="28" VerticalContentAlignment="Center"/>
+                    <Button Content="Редактор тегов" Command="{Binding OpenTagsEditorCommand}" Padding="8,4" FontSize="12" FontWeight="SemiBold" 
+                            Height="28" VerticalContentAlignment="Center"/>
+                    <Button Content="Настройки" Command="{Binding OpenSettingsCommand}" Padding="8,4" FontSize="12" FontWeight="SemiBold" 
+                            Height="28" VerticalContentAlignment="Center"/>
                 </StackPanel>
             </Grid>
         </Border>
