@@ -35,4 +35,9 @@ public class ModbusConnectionConfig
     public double WindowX { get; set; } = 100;
     public double WindowY { get; set; } = 100;
     public bool IsMaximized { get; set; } = false;
+
+    /// <summary>
+    /// Предпочтение темы оформления (System/Light/Dark)
+    /// </summary>
+    public ThemePreference Theme { get; set; } = ThemePreference.System;
 }

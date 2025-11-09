@@ -668,6 +668,7 @@ public partial class MainWindow : Window
             settingsVm.Port = mainVm.ConnectionConfig.Port;
             settingsVm.UnitId = mainVm.ConnectionConfig.UnitId;
             settingsVm.PollingIntervalMs = mainVm.ConnectionConfig.PollingIntervalMs;
+            settingsVm.Theme = mainVm.ConnectionConfig.Theme;
         }
 
         var settingsWindow = new SettingsWindow { DataContext = settingsVm };
@@ -679,6 +680,11 @@ public partial class MainWindow : Window
             vm.ConnectionConfig.Port = settingsVm.Port;
             vm.ConnectionConfig.UnitId = settingsVm.UnitId;
             vm.ConnectionConfig.PollingIntervalMs = settingsVm.PollingIntervalMs;
+            vm.ConnectionConfig.Theme = settingsVm.Theme;
+            
+            // Применяем новую тему
+            App.ApplyTheme(settingsVm.Theme);
+            
             await vm.SaveSettingsAsync();
         }
     }

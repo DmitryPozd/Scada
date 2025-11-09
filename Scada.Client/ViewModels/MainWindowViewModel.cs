@@ -1081,6 +1081,9 @@ public class MainWindowViewModel : ViewModelBase
             ConnectionConfig.TagsInitialized = true;
         }
         
+        // Применяем тему из настроек
+        App.ApplyTheme(ConnectionConfig.Theme);
+        
         // Сигнализируем о завершении загрузки
         SettingsLoaded = true;
         SettingsLoadedEvent?.Invoke(this, EventArgs.Empty);

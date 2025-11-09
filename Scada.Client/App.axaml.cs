@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
+using Scada.Client.Models;
 using System;
 using System.IO;
 
@@ -36,5 +37,22 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// Применить выбранную тему оформления.
+    /// </summary>
+    public static void ApplyTheme(ThemePreference theme)
+    {
+        if (Application.Current is null)
+            return;
+
+        Application.Current.RequestedThemeVariant = theme switch
+        {
+            ThemePreference.Light => ThemeVariant.Light,
+            ThemePreference.Dark => ThemeVariant.Dark,
+            ThemePreference.System => ThemeVariant.Default,
+            _ => ThemeVariant.Default
+        };
     }
 }

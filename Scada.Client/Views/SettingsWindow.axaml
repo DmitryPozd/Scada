@@ -3,11 +3,11 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:Scada.Client.ViewModels"
-        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="400"
+        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="480"
         x:Class="Scada.Client.Views.SettingsWindow"
         x:DataType="vm:SettingsWindowViewModel"
         Title="Настройки подключения"
-        Width="500" Height="400"
+        Width="500" Height="480"
         WindowStartupLocation="CenterOwner"
         CanResize="False">
 
@@ -70,6 +70,18 @@
                                Increment="100"
                                ShowButtonSpinner="True"
                                Margin="0,5,0,0"/>
+            </StackPanel>
+
+            <!-- Тема оформления -->
+            <StackPanel>
+                <TextBlock Text="Тема оформления:" FontWeight="SemiBold"/>
+                <ComboBox SelectedIndex="{Binding ThemeIndex}"
+                          HorizontalAlignment="Stretch"
+                          Margin="0,5,0,0">
+                    <ComboBoxItem Content="Системная (следует за Windows)"/>
+                    <ComboBoxItem Content="Светлая"/>
+                    <ComboBoxItem Content="Тёмная"/>
+                </ComboBox>
             </StackPanel>
 
         </StackPanel>
