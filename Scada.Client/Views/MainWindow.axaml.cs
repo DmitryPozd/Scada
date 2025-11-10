@@ -166,16 +166,6 @@ public partial class MainWindow : Window
                         updatedCount++;
                     }
                 }
-                else if (draggable.Content is CoilMomentaryButton momentaryBtn)
-                {
-                    totalButtons++;
-                    if (coilValues.TryGetValue(momentaryBtn.CoilAddress, out bool value))
-                    {
-                        System.Diagnostics.Debug.WriteLine($"  Updating CoilMomentaryButton at address {momentaryBtn.CoilAddress} to {value}, WAS: {momentaryBtn.IsActive}");
-                        momentaryBtn.IsActive = value;
-                        updatedCount++;
-                    }
-                }
                 else if (draggable.Content is ImageButton imgBtn)
                 {
                     totalButtons++;
@@ -299,7 +289,8 @@ public partial class MainWindow : Window
                         IconPathOn = coilElem.IconPathOn,
                         IconPathOff = coilElem.IconPathOff,
                         ButtonWidth = coilElem.ButtonWidth ?? 100.0,
-                        ButtonHeight = coilElem.ButtonHeight ?? 100.0
+                        ButtonHeight = coilElem.ButtonHeight ?? 100.0,
+                        ShowLabel = coilElem.ShowLabel
                     };
                     if (!string.IsNullOrEmpty(coilElem.TagName))
                     {
@@ -322,35 +313,38 @@ public partial class MainWindow : Window
                     control = coilBtn;
                     break;
                 case CoilElement momentaryElem when momentaryElem.Type == ElementType.CoilMomentaryButton:
-                    var momentaryBtn = new CoilMomentaryButton
+                    // Конвертируем старый тип CoilMomentaryButton в CoilButton с ButtonType.Momentary
+                    var momentaryAsCoilBtn = new CoilButton
                     {
                         Label = momentaryElem.Label,
                         CoilAddress = momentaryElem.CoilAddress,
+                        ButtonType = CoilButtonType.Momentary,
                         AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags),
                         IconPathOn = momentaryElem.IconPathOn,
                         IconPathOff = momentaryElem.IconPathOff,
                         ButtonWidth = momentaryElem.ButtonWidth ?? 100.0,
-                        ButtonHeight = momentaryElem.ButtonHeight ?? 100.0
+                        ButtonHeight = momentaryElem.ButtonHeight ?? 100.0,
+                        ShowLabel = momentaryElem.ShowLabel
                     };
                     if (!string.IsNullOrEmpty(momentaryElem.TagName))
                     {
-                        momentaryBtn.SelectedTag = vm.ConnectionConfig.Tags.FirstOrDefault(t => t.Name == momentaryElem.TagName);
+                        momentaryAsCoilBtn.SelectedTag = vm.ConnectionConfig.Tags.FirstOrDefault(t => t.Name == momentaryElem.TagName);
                     }
-                    momentaryBtn.OnCommand = ReactiveCommand.CreateFromTask(async () =>
+                    momentaryAsCoilBtn.OnCommand = ReactiveCommand.CreateFromTask(async () =>
                     {
-                        await vm.WriteCoilAsync(momentaryBtn.CoilAddress, true);
-                        momentaryBtn.IsActive = true;
+                        await vm.WriteCoilAsync(momentaryAsCoilBtn.CoilAddress, true);
+                        momentaryAsCoilBtn.IsActive = true;
                     });
-                    momentaryBtn.OffCommand = ReactiveCommand.CreateFromTask(async () =>
+                    momentaryAsCoilBtn.OffCommand = ReactiveCommand.CreateFromTask(async () =>
                     {
-                        await vm.WriteCoilAsync(momentaryBtn.CoilAddress, false);
-                        momentaryBtn.IsActive = false;
+                        await vm.WriteCoilAsync(momentaryAsCoilBtn.CoilAddress, false);
+                        momentaryAsCoilBtn.IsActive = false;
                     });
-                    momentaryBtn.CopyRequested += OnButtonCopyRequested;
-                    momentaryBtn.PasteRequested += OnButtonPasteRequested;
-                    momentaryBtn.DeleteRequested += OnButtonDeleteRequested;
-                    momentaryBtn.TagChanged += OnButtonTagChanged; // Подписка на изменение тега
-                    control = momentaryBtn;
+                    momentaryAsCoilBtn.CopyRequested += OnButtonCopyRequested;
+                    momentaryAsCoilBtn.PasteRequested += OnButtonPasteRequested;
+                    momentaryAsCoilBtn.DeleteRequested += OnButtonDeleteRequested;
+                    momentaryAsCoilBtn.TagChanged += OnButtonTagChanged;
+                    control = momentaryAsCoilBtn;
                     break;
                 case CoilElement imgElem when imgElem.Type == ElementType.ImageButton:
                     if (Enum.TryParse<ImageButtonType>(imgElem.ImageType, out var imgType))
@@ -365,7 +359,8 @@ public partial class MainWindow : Window
                             IconPathOn = imgElem.IconPathOn,
                             IconPathOff = imgElem.IconPathOff,
                             ButtonWidth = imgElem.ButtonWidth ?? 100.0,
-                            ButtonHeight = imgElem.ButtonHeight ?? 120.0
+                            ButtonHeight = imgElem.ButtonHeight ?? 120.0,
+                            ShowLabel = imgElem.ShowLabel
                         };
                         if (!string.IsNullOrEmpty(imgElem.TagName))
                         {
@@ -506,12 +501,6 @@ public partial class MainWindow : Window
                 coilBtn.PasteRequested += OnButtonPasteRequested;
                 coilBtn.DeleteRequested += OnButtonDeleteRequested;
             }
-            else if (child is CoilMomentaryButton momentaryBtn)
-            {
-                momentaryBtn.CopyRequested += OnButtonCopyRequested;
-                momentaryBtn.PasteRequested += OnButtonPasteRequested;
-                momentaryBtn.DeleteRequested += OnButtonDeleteRequested;
-            }
             else if (child is ImageButton imgBtn)
             {
                 imgBtn.CopyRequested += OnButtonCopyRequested;
@@ -596,35 +585,13 @@ public partial class MainWindow : Window
             newButton.TagChanged += OnButtonTagChanged; // Подписка на изменение тега
             buttonControl = newButton;
         }
-        else if (info.IsMomentary)
-        {
-            var newButton = new CoilMomentaryButton
-            {
-                Label = newLabel,
-                CoilAddress = info.CoilAddress,
-                AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags)
-            };
-            newButton.OnCommand = ReactiveCommand.CreateFromTask(async () =>
-            {
-                await vm.WriteCoilAsync(newButton.CoilAddress, true);
-                newButton.IsActive = true;
-            });
-            newButton.OffCommand = ReactiveCommand.CreateFromTask(async () =>
-            {
-                await vm.WriteCoilAsync(newButton.CoilAddress, false);
-                newButton.IsActive = false;
-            });
-            newButton.CopyRequested += OnButtonCopyRequested;
-            newButton.PasteRequested += OnButtonPasteRequested;
-            newButton.DeleteRequested += OnButtonDeleteRequested;
-            buttonControl = newButton;
-        }
         else
         {
             var newButton = new CoilButton
             {
                 Label = newLabel,
                 CoilAddress = info.CoilAddress,
+                ButtonType = info.IsMomentary ? CoilButtonType.Momentary : CoilButtonType.Toggle,
                 AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags)
             };
             newButton.OnCommand = ReactiveCommand.CreateFromTask(async () =>
@@ -758,10 +725,6 @@ public partial class MainWindow : Window
                 {
                     readBtn.AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags);
                 }
-                else if (child is CoilMomentaryButton momentaryBtn)
-                {
-                    momentaryBtn.AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags);
-                }
                 else if (child is ImageButton imgBtn)
                 {
                     // ImageButton - только X (Input) и Y (Coils)
@@ -788,16 +751,6 @@ public partial class MainWindow : Window
                     if (!string.IsNullOrEmpty(selectedTagName))
                     {
                         coilBtn.SelectedTag = vm.ConnectionConfig.Tags.FirstOrDefault(t => t.Name == selectedTagName);
-                    }
-                }
-                else if (draggable.Content is CoilMomentaryButton momentaryBtn)
-                {
-                    var selectedTagName = momentaryBtn.SelectedTag?.Name;
-                    momentaryBtn.AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags);
-                    // Восстанавливаем выбранный тег по имени
-                    if (!string.IsNullOrEmpty(selectedTagName))
-                    {
-                        momentaryBtn.SelectedTag = vm.ConnectionConfig.Tags.FirstOrDefault(t => t.Name == selectedTagName);
                     }
                 }
                 else if (draggable.Content is ImageButton imgBtn)
@@ -879,24 +832,8 @@ public partial class MainWindow : Window
                     IconPathOn = coilBtn.IconPathOn,
                     IconPathOff = coilBtn.IconPathOff,
                     ButtonWidth = coilBtn.ButtonWidth,
-                    ButtonHeight = coilBtn.ButtonHeight
-                };
-            }
-            else if (element is CoilMomentaryButton momentaryBtn)
-            {
-                mnemoElement = new CoilElement
-                {
-                    Type = ElementType.CoilMomentaryButton,
-                    X = draggable.X,
-                    Y = draggable.Y,
-                    Label = momentaryBtn.Label,
-                    CoilAddress = momentaryBtn.CoilAddress,
-                    TagName = momentaryBtn.SelectedTag?.Name,
-                    ButtonType = CoilButtonType.Momentary, // CoilMomentaryButton всегда Momentary
-                    IconPathOn = momentaryBtn.IconPathOn,
-                    IconPathOff = momentaryBtn.IconPathOff,
-                    ButtonWidth = momentaryBtn.ButtonWidth,
-                    ButtonHeight = momentaryBtn.ButtonHeight
+                    ButtonHeight = coilBtn.ButtonHeight,
+                    ShowLabel = coilBtn.ShowLabel
                 };
             }
             else if (element is ImageButton imgBtn)
@@ -914,7 +851,8 @@ public partial class MainWindow : Window
                     IconPathOn = imgBtn.IconPathOn,
                     IconPathOff = imgBtn.IconPathOff,
                     ButtonWidth = imgBtn.ButtonWidth,
-                    ButtonHeight = imgBtn.ButtonHeight
+                    ButtonHeight = imgBtn.ButtonHeight,
+                    ShowLabel = imgBtn.ShowLabel
                 };
             }
             else if (element is PumpControl pump)
@@ -1134,13 +1072,6 @@ public partial class MainWindow : Window
             dialog.Close();
         };
 
-        var momentaryButtonBtn = CreateMenuButton("⏺️ Кнопка Momentary (без фиксации)", "Кнопка, активная только при удержании");
-        momentaryButtonBtn.Click += (s, e) =>
-        {
-            CreateElementAtLastPosition(ElementType.CoilMomentaryButton);
-            dialog.Close();
-        };
-
         var imageMotorBtn = CreateMenuButton("⚙️ Мотор (ImageButton)", "Графический элемент управления мотором");
         imageMotorBtn.Click += (s, e) =>
         {
@@ -1191,7 +1122,6 @@ public partial class MainWindow : Window
         };
 
         stack.Children.Add(coilButtonBtn);
-        stack.Children.Add(momentaryButtonBtn);
         stack.Children.Add(imageMotorBtn);
         stack.Children.Add(imageValveBtn);
         stack.Children.Add(imageFanBtn);
@@ -1289,27 +1219,29 @@ public partial class MainWindow : Window
                 break;
 
             case ElementType.CoilMomentaryButton:
-                var momentaryBtn = new CoilMomentaryButton
+                // Создаем CoilButton с типом Momentary для обратной совместимости
+                var momentaryAsBtn = new CoilButton
                 {
                     Label = $"Момент. кнопка {_dynamicButtonCounter++}",
                     CoilAddress = 0,
+                    ButtonType = CoilButtonType.Momentary,
                     AvailableTags = GetFilteredTagsForCoilButton(vm.ConnectionConfig.Tags)
                 };
-                momentaryBtn.OnCommand = ReactiveCommand.CreateFromTask(async () =>
+                momentaryAsBtn.OnCommand = ReactiveCommand.CreateFromTask(async () =>
                 {
-                    await vm.WriteCoilAsync(momentaryBtn.CoilAddress, true);
-                    momentaryBtn.IsActive = true;
+                    await vm.WriteCoilAsync(momentaryAsBtn.CoilAddress, true);
+                    momentaryAsBtn.IsActive = true;
                 });
-                momentaryBtn.OffCommand = ReactiveCommand.CreateFromTask(async () =>
+                momentaryAsBtn.OffCommand = ReactiveCommand.CreateFromTask(async () =>
                 {
-                    await vm.WriteCoilAsync(momentaryBtn.CoilAddress, false);
-                    momentaryBtn.IsActive = false;
+                    await vm.WriteCoilAsync(momentaryAsBtn.CoilAddress, false);
+                    momentaryAsBtn.IsActive = false;
                 });
-                momentaryBtn.CopyRequested += OnButtonCopyRequested;
-                momentaryBtn.PasteRequested += OnButtonPasteRequested;
-                momentaryBtn.DeleteRequested += OnButtonDeleteRequested;
-                momentaryBtn.TagChanged += OnButtonTagChanged;
-                control = momentaryBtn;
+                momentaryAsBtn.CopyRequested += OnButtonCopyRequested;
+                momentaryAsBtn.PasteRequested += OnButtonPasteRequested;
+                momentaryAsBtn.DeleteRequested += OnButtonDeleteRequested;
+                momentaryAsBtn.TagChanged += OnButtonTagChanged;
+                control = momentaryAsBtn;
                 break;
 
             case ElementType.ImageButton when imageType.HasValue:

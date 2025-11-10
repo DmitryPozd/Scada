@@ -9,7 +9,7 @@ namespace Scada.Client.Models;
 public enum ElementType
 {
     CoilButton,
-    CoilMomentaryButton,
+    CoilMomentaryButton, // Устарел: используется только для обратной совместимости, конвертируется в CoilButton с ButtonType.Momentary
     ImageButton,
     Pump,
     Valve,
@@ -54,6 +54,7 @@ public class CoilElement : MnemoschemeElement
     public string? IconPathOff { get; set; } // Путь к иконке для состояния OFF
     public double? ButtonWidth { get; set; } // Ширина для ImageButton
     public double? ButtonHeight { get; set; } // Высота для ImageButton
+    public bool ShowLabel { get; set; } = true; // Показывать надпись на кнопке
 }
 
 /// <summary>

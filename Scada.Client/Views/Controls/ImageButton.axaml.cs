@@ -67,6 +67,9 @@ public partial class ImageButton : UserControl
     public static readonly StyledProperty<CoilButtonType> ButtonTypeProperty =
         AvaloniaProperty.Register<ImageButton, CoilButtonType>(nameof(ButtonType), defaultValue: CoilButtonType.Toggle);
 
+    public static readonly StyledProperty<bool> ShowLabelProperty =
+        AvaloniaProperty.Register<ImageButton, bool>(nameof(ShowLabel), defaultValue: true);
+
     public event EventHandler<CoilButtonInfo>? CopyRequested;
     public event EventHandler? PasteRequested;
     public event EventHandler? DeleteRequested; // Событие для удаления элемента
@@ -148,6 +151,12 @@ public partial class ImageButton : UserControl
     {
         get => GetValue(ButtonTypeProperty);
         set => SetValue(ButtonTypeProperty, value);
+    }
+
+    public bool ShowLabel
+    {
+        get => GetValue(ShowLabelProperty);
+        set => SetValue(ShowLabelProperty, value);
     }
 
     public ImageButton()
@@ -559,6 +568,15 @@ public partial class ImageButton : UserControl
         stack.Children.Add(buttonTypeTextBlock);
         stack.Children.Add(buttonTypeCombo);
 
+        // Чекбокс для отображения надписи
+        var showLabelCheckBox = new CheckBox
+        {
+            Content = "Показывать надпись",
+            IsChecked = ShowLabel,
+            Margin = new Thickness(0, 5, 0, 0)
+        };
+        stack.Children.Add(showLabelCheckBox);
+
         // Разделитель
         stack.Children.Add(new Separator { Margin = new Thickness(0, 5, 0, 5) });
 
@@ -642,12 +660,12 @@ public partial class ImageButton : UserControl
         if (AvailableTags == null || !AvailableTags.Any())
         {
             // Если тегов нет, показываем простой ввод адреса
-            await ShowSimpleAddressDialogInStack(stack, dialog, labelInput, iconOnInput, iconOffInput, buttonTypeCombo);
+            await ShowSimpleAddressDialogInStack(stack, dialog, labelInput, iconOnInput, iconOffInput, buttonTypeCombo, showLabelCheckBox);
         }
         else
         {
             // Показываем выбор тега
-            ShowTagSelectionInDialog(stack, dialog, labelInput, iconOnInput, iconOffInput, widthInput, heightInput, buttonTypeCombo);
+            ShowTagSelectionInDialog(stack, dialog, labelInput, iconOnInput, iconOffInput, widthInput, heightInput, buttonTypeCombo, showLabelCheckBox);
         }
         
         scrollViewer.Content = stack;
@@ -659,7 +677,7 @@ public partial class ImageButton : UserControl
         }
     }
 
-    private void ShowTagSelectionInDialog(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput, NumericUpDown widthInput, NumericUpDown heightInput, ComboBox buttonTypeCombo)
+    private void ShowTagSelectionInDialog(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput, NumericUpDown widthInput, NumericUpDown heightInput, ComboBox buttonTypeCombo, CheckBox showLabelCheckBox)
     {
         var label = new TextBlock 
         { 
@@ -736,6 +754,9 @@ public partial class ImageButton : UserControl
                 ButtonType = selectedType;
             }
             
+            // Сохраняем видимость надписи
+            ShowLabel = showLabelCheckBox.IsChecked ?? true;
+            
             if (combo.SelectedItem is ComboBoxItem item && item.Tag is TagDefinition selectedTag)
             {
                 SelectedTag = selectedTag;
@@ -755,7 +776,7 @@ public partial class ImageButton : UserControl
         stack.Children.Add(buttons);
     }
 
-    private System.Threading.Tasks.Task ShowSimpleAddressDialogInStack(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput, ComboBox buttonTypeCombo)
+    private System.Threading.Tasks.Task ShowSimpleAddressDialogInStack(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput, ComboBox buttonTypeCombo, CheckBox showLabelCheckBox)
     {
         var label = new TextBlock 
         { 
@@ -797,6 +818,9 @@ public partial class ImageButton : UserControl
             {
                 ButtonType = selectedType;
             }
+            
+            // Сохраняем видимость надписи
+            ShowLabel = showLabelCheckBox.IsChecked ?? true;
             
             dialog.Close();
         };

@@ -57,6 +57,9 @@ public partial class CoilButton : UserControl
     public static readonly StyledProperty<CoilButtonType> ButtonTypeProperty =
         AvaloniaProperty.Register<CoilButton, CoilButtonType>(nameof(ButtonType), defaultValue: CoilButtonType.Toggle);
 
+    public static readonly StyledProperty<bool> ShowLabelProperty =
+        AvaloniaProperty.Register<CoilButton, bool>(nameof(ShowLabel), defaultValue: true);
+
     public event EventHandler<CoilButtonInfo>? CopyRequested;
     public event EventHandler? PasteRequested;
     public event EventHandler? DeleteRequested; // Событие для удаления элемента
@@ -138,6 +141,12 @@ public partial class CoilButton : UserControl
     {
         get => GetValue(ButtonTypeProperty);
         set => SetValue(ButtonTypeProperty, value);
+    }
+
+    public bool ShowLabel
+    {
+        get => GetValue(ShowLabelProperty);
+        set => SetValue(ShowLabelProperty, value);
     }
 
     public CoilButton()
@@ -539,6 +548,15 @@ public partial class CoilButton : UserControl
         stack.Children.Add(buttonTypeTextBlock);
         stack.Children.Add(buttonTypeCombo);
 
+        // Чекбокс для отображения надписи
+        var showLabelCheckBox = new CheckBox
+        {
+            Content = "Показывать надпись",
+            IsChecked = ShowLabel,
+            Margin = new Thickness(0, 5, 0, 0)
+        };
+        stack.Children.Add(showLabelCheckBox);
+
         // Старое поле для обратной совместимости (скрыто)
         var iconPanel = new StackPanel { IsVisible = false };
         var iconInput = new TextBox { Text = IconPath ?? "" };
@@ -665,6 +683,9 @@ public partial class CoilButton : UserControl
                     ButtonType = selectedType;
                 }
                 
+                // Сохраняем видимость надписи
+                ShowLabel = showLabelCheckBox.IsChecked ?? true;
+                
                 CoilAddress = (ushort)input.Value;
                 dialog.Close();
             };
@@ -682,7 +703,7 @@ public partial class CoilButton : UserControl
         else
         {
             // Показываем выбор тега
-            ShowTagSelectionInDialog(stack, dialog, labelInput, iconOnInput, iconOffInput, buttonTypeCombo);
+            ShowTagSelectionInDialog(stack, dialog, labelInput, iconOnInput, iconOffInput, buttonTypeCombo, showLabelCheckBox);
         }
         
         scrollViewer.Content = stack;
@@ -694,7 +715,7 @@ public partial class CoilButton : UserControl
         }
     }
 
-    private void ShowTagSelectionInDialog(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput, ComboBox buttonTypeCombo)
+    private void ShowTagSelectionInDialog(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput, ComboBox buttonTypeCombo, CheckBox showLabelCheckBox)
     {
         // Проверяем наличие тегов
         if (AvailableTags == null || !AvailableTags.Any())
@@ -779,6 +800,9 @@ public partial class CoilButton : UserControl
             {
                 ButtonType = selectedType;
             }
+            
+            // Сохраняем видимость надписи
+            ShowLabel = showLabelCheckBox.IsChecked ?? true;
             
             if (combo.SelectedItem is ComboBoxItem item && item.Tag is TagDefinition selectedTag)
             {

@@ -23,7 +23,8 @@
                  HorizontalAlignment="Center" 
                  FontSize="11"
                  TextWrapping="Wrap"
-                 TextAlignment="Center"/>
+                 TextAlignment="Center"
+                 IsVisible="{Binding ShowLabel, RelativeSource={RelativeSource AncestorType=controls:CoilButton}}"/>
       
       <!-- Визуальный индикатор состояния -->
       <Border CornerRadius="6" BorderThickness="2" Margin="5">
@@ -124,17 +125,6 @@
           </TextBlock>
         </Grid>
       </Border>
-      
-      <!-- Текстовый индикатор -->
-      <TextBlock FontSize="9" FontWeight="SemiBold" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis">
-        <TextBlock.Text>
-          <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
-            <Binding.Converter>
-              <controls:CoilStateTextConverter/>
-            </Binding.Converter>
-          </Binding>
-        </TextBlock.Text>
-      </TextBlock>
     </StackPanel>
   </Border>
   

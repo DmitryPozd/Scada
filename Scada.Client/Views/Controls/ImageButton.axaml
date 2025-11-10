@@ -15,7 +15,7 @@
             Height="{Binding ButtonHeight, RelativeSource={RelativeSource AncestorType=controls:ImageButton}}"
             PointerPressed="OnMainButtonPressed"
             PointerReleased="OnMainButtonReleased">
-      <Grid RowDefinitions="Auto,*,Auto">
+      <Grid RowDefinitions="Auto,*">
         <!-- Название -->
         <TextBlock Grid.Row="0"
                    Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:ImageButton}}"
@@ -24,6 +24,7 @@
                    FontSize="11"
                    TextWrapping="Wrap"
                    TextAlignment="Center"
+                   IsVisible="{Binding ShowLabel, RelativeSource={RelativeSource AncestorType=controls:ImageButton}}"
                    Margin="0,0,0,4"/>
         
         <!-- Графическое представление с индикацией состояния -->
@@ -82,30 +83,6 @@
             </ContentControl>
           </Viewbox>
         </Grid>
-      </Border>
-      
-      <!-- Компактный индикатор состояния -->
-      <Border Grid.Row="2" 
-              Height="18" 
-              CornerRadius="3" 
-              Padding="4,2">
-        <Border.Background>
-          <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}">
-            <Binding.Converter>
-              <controls:ActiveStateBackgroundConverter/>
-            </Binding.Converter>
-          </Binding>
-        </Border.Background>
-        <TextBlock FontSize="9" FontWeight="SemiBold" HorizontalAlignment="Center">
-          <TextBlock.Text>
-            <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}">
-              <Binding.Converter>
-                <controls:ActiveStateTextConverter/>
-              </Binding.Converter>
-            </Binding>
-          </TextBlock.Text>
-          <TextBlock.Foreground>White</TextBlock.Foreground>
-        </TextBlock>
       </Border>
     </Grid>
   </Border>

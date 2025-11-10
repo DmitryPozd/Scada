@@ -206,14 +206,15 @@
                                                 ReadCommand="{Binding ReadCoilCommand}"/>
                     </controls:DraggableControl>
 
-                    <!-- CoilMomentaryButton (кнопка без фиксации) -->
+                    <!-- CoilButton в режиме Momentary (кнопка без фиксации) -->
                     <controls:DraggableControl X="300" Y="440">
-                        <controls:CoilMomentaryButton Label="Кнопка (момент.)"
-                                                     IsActive="{Binding MomentaryActive}"
-                                                     CoilAddress="{Binding MomentaryAddress, Mode=TwoWay}"
-                                                     AvailableTags="{Binding ConnectionConfig.Tags}"
-                                                     OnCommand="{Binding MomentaryOnCommand}"
-                                                     OffCommand="{Binding MomentaryOffCommand}"/>
+                        <controls:CoilButton Label="Кнопка (момент.)"
+                                            IsActive="{Binding MomentaryActive}"
+                                            CoilAddress="{Binding MomentaryAddress, Mode=TwoWay}"
+                                            ButtonType="Momentary"
+                                            AvailableTags="{Binding ConnectionConfig.Tags}"
+                                            OnCommand="{Binding MomentaryOnCommand}"
+                                            OffCommand="{Binding MomentaryOffCommand}"/>
                     </controls:DraggableControl>
 
                 </Canvas>
