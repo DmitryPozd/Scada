@@ -17,15 +17,6 @@ using Scada.Client.Services;
 
 namespace Scada.Client.Views.Controls;
 
-public enum ImageButtonType
-{
-    Motor,
-    Valve,
-    Fan,
-    Heater,
-    Light
-}
-
 public partial class ImageButton : UserControl
 {
     public static readonly StyledProperty<bool> IsActiveProperty =
@@ -33,9 +24,6 @@ public partial class ImageButton : UserControl
 
     public static readonly StyledProperty<string> LabelProperty =
         AvaloniaProperty.Register<ImageButton, string>(nameof(Label), defaultValue: "Устройство");
-
-    public static readonly StyledProperty<ImageButtonType> ImageTypeProperty =
-        AvaloniaProperty.Register<ImageButton, ImageButtonType>(nameof(ImageType), defaultValue: ImageButtonType.Motor);
 
     public static readonly StyledProperty<ushort> CoilAddressProperty =
         AvaloniaProperty.Register<ImageButton, ushort>(nameof(CoilAddress), defaultValue: (ushort)0);
@@ -70,6 +58,12 @@ public partial class ImageButton : UserControl
     public static readonly StyledProperty<bool> ShowLabelProperty =
         AvaloniaProperty.Register<ImageButton, bool>(nameof(ShowLabel), defaultValue: true);
 
+    public static readonly StyledProperty<DisplaySettings?> DisplaySettingsProperty =
+        AvaloniaProperty.Register<ImageButton, DisplaySettings?>(nameof(DisplaySettings));
+
+    public static readonly StyledProperty<string> DisplayValueProperty =
+        AvaloniaProperty.Register<ImageButton, string>(nameof(DisplayValue), defaultValue: string.Empty);
+
     public event EventHandler<CoilButtonInfo>? CopyRequested;
     public event EventHandler? PasteRequested;
     public event EventHandler? DeleteRequested; // Событие для удаления элемента
@@ -85,12 +79,6 @@ public partial class ImageButton : UserControl
     {
         get => GetValue(LabelProperty);
         set => SetValue(LabelProperty, value);
-    }
-
-    public ImageButtonType ImageType
-    {
-        get => GetValue(ImageTypeProperty);
-        set => SetValue(ImageTypeProperty, value);
     }
 
     public ushort CoilAddress
@@ -157,6 +145,18 @@ public partial class ImageButton : UserControl
     {
         get => GetValue(ShowLabelProperty);
         set => SetValue(ShowLabelProperty, value);
+    }
+
+    public DisplaySettings? DisplaySettings
+    {
+        get => GetValue(DisplaySettingsProperty);
+        set => SetValue(DisplaySettingsProperty, value);
+    }
+
+    public string DisplayValue
+    {
+        get => GetValue(DisplayValueProperty);
+        set => SetValue(DisplayValueProperty, value);
     }
 
     public ImageButton()
@@ -268,6 +268,30 @@ public partial class ImageButton : UserControl
     private double _resizeStartWidth;
     private double _resizeStartHeight;
     private string _resizeMode = ""; // "bottomright", "right", "bottom"
+
+    // Поля для хранения UI элементов настроек отображения (для сохранения в диалоге)
+    private CheckBox? _showValueCheckBox;
+    private NumericUpDown? _registerAddressInput;
+    private ComboBox? _registerTypeCombo;
+    private ComboBox? _dataTypeCombo;
+    private NumericUpDown? _scaleInput;
+    private NumericUpDown? _offsetInput;
+    private NumericUpDown? _minValueInput;
+    private NumericUpDown? _maxValueInput;
+    private TextBox? _unitInput;
+    private CheckBox? _showUnitCheckBox;
+    private NumericUpDown? _decimalPlacesInput;
+    private CheckBox? _colorByStateCheckBox;
+    private TextBox? _offColorInput;
+    private TextBox? _onColorInput;
+    private TextBox? _offTextInput;
+    private TextBox? _onTextInput;
+    private CheckBox? _useStateTextCheckBox;
+    private TextBox? _lowColorInput;
+    private TextBox? _normalColorInput;
+    private TextBox? _highColorInput;
+    private NumericUpDown? _lowThresholdInput;
+    private NumericUpDown? _highThresholdInput;
 
     private void OnResizeGripPressed(object? sender, PointerPressedEventArgs e)
     {
@@ -397,7 +421,7 @@ public partial class ImageButton : UserControl
             CoilAddress = CoilAddress,
             TagName = SelectedTag?.Name,
             IsImageButton = true,
-            ImageType = ImageType.ToString(),
+            ImageType = string.Empty,
             X = parentDraggable?.X ?? 0,
             Y = parentDraggable?.Y ?? 0
         };
@@ -580,6 +604,312 @@ public partial class ImageButton : UserControl
         // Разделитель
         stack.Children.Add(new Separator { Margin = new Thickness(0, 5, 0, 5) });
 
+        // === СЕКЦИЯ НАСТРОЕК ОТОБРАЖЕНИЯ ЗНАЧЕНИЯ ===
+        var displaySettingsHeader = new TextBlock 
+        { 
+            Text = "📊 Настройки отображения значения регистра", 
+            FontWeight = FontWeight.Bold,
+            FontSize = 13,
+            Margin = new Thickness(0, 5, 0, 10)
+        };
+        stack.Children.Add(displaySettingsHeader);
+
+        // Инициализируем DisplaySettings если null
+        if (DisplaySettings == null)
+        {
+            DisplaySettings = new DisplaySettings();
+        }
+
+        // Чекбокс "Показывать значение"
+        var showValueCheckBox = new CheckBox
+        {
+            Content = "Показывать значение регистра",
+            IsChecked = DisplaySettings.ShowValue
+        };
+        _showValueCheckBox = showValueCheckBox;
+        stack.Children.Add(showValueCheckBox);
+
+        // Панель настроек (видна только если ShowValue = true)
+        var displaySettingsPanel = new StackPanel 
+        { 
+            Spacing = 10,
+            Margin = new Thickness(20, 10, 0, 0),
+            IsVisible = DisplaySettings.ShowValue
+        };
+
+        // Привязываем видимость панели к чекбоксу
+        showValueCheckBox.PropertyChanged += (s, e) =>
+        {
+            if (e.Property.Name == nameof(CheckBox.IsChecked))
+            {
+                displaySettingsPanel.IsVisible = showValueCheckBox.IsChecked ?? false;
+            }
+        };
+
+        // Адрес регистра
+        var registerAddressPanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10 };
+        registerAddressPanel.Children.Add(new TextBlock { Text = "Адрес регистра:", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, Width = 120 });
+        var registerAddressInput = new NumericUpDown
+        {
+            Minimum = 0,
+            Maximum = 65535,
+            Value = DisplaySettings.RegisterAddress,
+            Width = 100,
+            Increment = 1
+        };
+        _registerAddressInput = registerAddressInput;
+        registerAddressPanel.Children.Add(registerAddressInput);
+        displaySettingsPanel.Children.Add(registerAddressPanel);
+
+        // Тип регистра
+        var registerTypePanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10 };
+        registerTypePanel.Children.Add(new TextBlock { Text = "Тип регистра:", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, Width = 120 });
+        var registerTypeCombo = new ComboBox { Width = 150 };
+        registerTypeCombo.Items.Add(new ComboBoxItem { Content = "Holding Register", Tag = RegisterType.Holding });
+        registerTypeCombo.Items.Add(new ComboBoxItem { Content = "Input Register", Tag = RegisterType.Input });
+        registerTypeCombo.Items.Add(new ComboBoxItem { Content = "Coil", Tag = RegisterType.Coils });
+        registerTypeCombo.SelectedIndex = DisplaySettings.RegisterType switch
+        {
+            RegisterType.Holding => 0,
+            RegisterType.Input => 1,
+            RegisterType.Coils => 2,
+            _ => 0
+        };
+        _registerTypeCombo = registerTypeCombo;
+        registerTypePanel.Children.Add(registerTypeCombo);
+        displaySettingsPanel.Children.Add(registerTypePanel);
+
+        // Тип данных
+        var dataTypePanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10 };
+        dataTypePanel.Children.Add(new TextBlock { Text = "Тип данных:", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, Width = 120 });
+        var dataTypeCombo = new ComboBox { Width = 150 };
+        dataTypeCombo.Items.Add(new ComboBoxItem { Content = "UInt16", Tag = DataType.UInt16 });
+        dataTypeCombo.Items.Add(new ComboBoxItem { Content = "Int16", Tag = DataType.Int16 });
+        dataTypeCombo.Items.Add(new ComboBoxItem { Content = "UInt32", Tag = DataType.UInt32 });
+        dataTypeCombo.Items.Add(new ComboBoxItem { Content = "Int32", Tag = DataType.Int32 });
+        dataTypeCombo.Items.Add(new ComboBoxItem { Content = "Float32", Tag = DataType.Float32 });
+        dataTypeCombo.Items.Add(new ComboBoxItem { Content = "Bool", Tag = DataType.Bool });
+        dataTypeCombo.SelectedIndex = DisplaySettings.DataType switch
+        {
+            DataType.UInt16 => 0,
+            DataType.Int16 => 1,
+            DataType.UInt32 => 2,
+            DataType.Int32 => 3,
+            DataType.Float32 => 4,
+            DataType.Bool => 5,
+            _ => 0
+        };
+        _dataTypeCombo = dataTypeCombo;
+        dataTypePanel.Children.Add(dataTypeCombo);
+        displaySettingsPanel.Children.Add(dataTypePanel);
+
+        // Масштаб и смещение
+        var scaleOffsetPanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10 };
+        scaleOffsetPanel.Children.Add(new TextBlock { Text = "Масштаб:", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var scaleInput = new NumericUpDown
+        {
+            Minimum = -1000,
+            Maximum = 1000,
+            Value = (decimal)DisplaySettings.Scale,
+            Width = 80,
+            Increment = 0.1m,
+            FormatString = "0.###"
+        };
+        _scaleInput = scaleInput;
+        scaleOffsetPanel.Children.Add(scaleInput);
+        scaleOffsetPanel.Children.Add(new TextBlock { Text = "Смещение:", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0) });
+        var offsetInput = new NumericUpDown
+        {
+            Minimum = -10000,
+            Maximum = 10000,
+            Value = (decimal)DisplaySettings.Offset,
+            Width = 80,
+            Increment = 1,
+            FormatString = "0.###"
+        };
+        _offsetInput = offsetInput;
+        scaleOffsetPanel.Children.Add(offsetInput);
+        displaySettingsPanel.Children.Add(scaleOffsetPanel);
+
+        // Диапазон значений
+        var rangePanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10 };
+        rangePanel.Children.Add(new TextBlock { Text = "Мин:", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var minValueInput = new NumericUpDown
+        {
+            Minimum = -100000,
+            Maximum = 100000,
+            Value = DisplaySettings.MinValue.HasValue ? (decimal)DisplaySettings.MinValue.Value : 0,
+            Width = 80,
+            Increment = 10,
+            FormatString = "0.##"
+        };
+        _minValueInput = minValueInput;
+        rangePanel.Children.Add(minValueInput);
+        rangePanel.Children.Add(new TextBlock { Text = "Макс:", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var maxValueInput = new NumericUpDown
+        {
+            Minimum = -100000,
+            Maximum = 100000,
+            Value = DisplaySettings.MaxValue.HasValue ? (decimal)DisplaySettings.MaxValue.Value : 100,
+            Width = 80,
+            Increment = 10,
+            FormatString = "0.##"
+        };
+        _maxValueInput = maxValueInput;
+        rangePanel.Children.Add(maxValueInput);
+        displaySettingsPanel.Children.Add(rangePanel);
+
+        // Единицы измерения
+        var unitPanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10 };
+        unitPanel.Children.Add(new TextBlock { Text = "Единицы:", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, Width = 120 });
+        var unitInput = new TextBox
+        {
+            Text = DisplaySettings.Unit,
+            Width = 100,
+            Watermark = "°C, %, bar..."
+        };
+        _unitInput = unitInput;
+        unitPanel.Children.Add(unitInput);
+        var showUnitCheckBox = new CheckBox
+        {
+            Content = "Показывать",
+            IsChecked = DisplaySettings.ShowUnit,
+            Margin = new Thickness(10, 0, 0, 0)
+        };
+        _showUnitCheckBox = showUnitCheckBox;
+        unitPanel.Children.Add(showUnitCheckBox);
+        displaySettingsPanel.Children.Add(unitPanel);
+
+        // Знаки после запятой
+        var decimalPlacesPanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10 };
+        decimalPlacesPanel.Children.Add(new TextBlock { Text = "Знаков после запятой:", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, Width = 150 });
+        var decimalPlacesInput = new NumericUpDown
+        {
+            Minimum = 0,
+            Maximum = 5,
+            Value = DisplaySettings.DecimalPlaces,
+            Width = 70,
+            Increment = 1
+        };
+        _decimalPlacesInput = decimalPlacesInput;
+        decimalPlacesPanel.Children.Add(decimalPlacesInput);
+        displaySettingsPanel.Children.Add(decimalPlacesPanel);
+
+        // Цвета в зависимости от состояния
+        var colorByStateCheckBox = new CheckBox
+        {
+            Content = "Изменять цвет в зависимости от значения",
+            IsChecked = DisplaySettings.ColorByState,
+            Margin = new Thickness(0, 5, 0, 5)
+        };
+        _colorByStateCheckBox = colorByStateCheckBox;
+        displaySettingsPanel.Children.Add(colorByStateCheckBox);
+
+        // Панель настроек цветов (видна только если ColorByState = true)
+        var colorSettingsPanel = new StackPanel 
+        { 
+            Spacing = 8,
+            Margin = new Thickness(20, 5, 0, 0),
+            IsVisible = DisplaySettings.ColorByState
+        };
+
+        colorByStateCheckBox.PropertyChanged += (s, e) =>
+        {
+            if (e.Property.Name == nameof(CheckBox.IsChecked))
+            {
+                colorSettingsPanel.IsVisible = colorByStateCheckBox.IsChecked ?? false;
+            }
+        };
+
+        // Настройки для Bool типа (ON/OFF)
+        var boolColorsPanel = new StackPanel { Spacing = 5 };
+        
+        var offStatePanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10 };
+        offStatePanel.Children.Add(new TextBlock { Text = "OFF - Цвет:", Width = 100, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var offColorInput = new TextBox { Text = DisplaySettings.OffStateColor, Width = 80 };
+        _offColorInput = offColorInput;
+        offStatePanel.Children.Add(offColorInput);
+        offStatePanel.Children.Add(new TextBlock { Text = "Текст:", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var offTextInput = new TextBox { Text = DisplaySettings.OffStateText, Width = 80 };
+        _offTextInput = offTextInput;
+        offStatePanel.Children.Add(offTextInput);
+        boolColorsPanel.Children.Add(offStatePanel);
+
+        var onStatePanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10 };
+        onStatePanel.Children.Add(new TextBlock { Text = "ON - Цвет:", Width = 100, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var onColorInput = new TextBox { Text = DisplaySettings.OnStateColor, Width = 80 };
+        _onColorInput = onColorInput;
+        onStatePanel.Children.Add(onColorInput);
+        onStatePanel.Children.Add(new TextBlock { Text = "Текст:", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var onTextInput = new TextBox { Text = DisplaySettings.OnStateText, Width = 80 };
+        _onTextInput = onTextInput;
+        onStatePanel.Children.Add(onTextInput);
+        boolColorsPanel.Children.Add(onStatePanel);
+
+        var useStateTextCheckBox = new CheckBox
+        {
+            Content = "Использовать текст вместо значений для Bool",
+            IsChecked = DisplaySettings.UseStateText
+        };
+        _useStateTextCheckBox = useStateTextCheckBox;
+        boolColorsPanel.Children.Add(useStateTextCheckBox);
+
+        colorSettingsPanel.Children.Add(boolColorsPanel);
+
+        // Настройки для числовых типов (Low/Normal/High)
+        var numericColorsPanel = new StackPanel { Spacing = 5, Margin = new Thickness(0, 10, 0, 0) };
+        
+        var lowValuePanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10 };
+        lowValuePanel.Children.Add(new TextBlock { Text = "Низкое - Цвет:", Width = 120, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var lowColorInput = new TextBox { Text = DisplaySettings.LowValueColor, Width = 80 };
+        _lowColorInput = lowColorInput;
+        lowValuePanel.Children.Add(lowColorInput);
+        lowValuePanel.Children.Add(new TextBlock { Text = "Порог <", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var lowThresholdInput = new NumericUpDown
+        {
+            Minimum = -100000,
+            Maximum = 100000,
+            Value = DisplaySettings.LowThreshold.HasValue ? (decimal)DisplaySettings.LowThreshold.Value : 20,
+            Width = 80,
+            Increment = 10
+        };
+        _lowThresholdInput = lowThresholdInput;
+        lowValuePanel.Children.Add(lowThresholdInput);
+        numericColorsPanel.Children.Add(lowValuePanel);
+
+        var normalValuePanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10 };
+        normalValuePanel.Children.Add(new TextBlock { Text = "Нормальное - Цвет:", Width = 120, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var normalColorInput = new TextBox { Text = DisplaySettings.NormalValueColor, Width = 80 };
+        _normalColorInput = normalColorInput;
+        normalValuePanel.Children.Add(normalColorInput);
+        numericColorsPanel.Children.Add(normalValuePanel);
+
+        var highValuePanel = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10 };
+        highValuePanel.Children.Add(new TextBlock { Text = "Высокое - Цвет:", Width = 120, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var highColorInput = new TextBox { Text = DisplaySettings.HighValueColor, Width = 80 };
+        _highColorInput = highColorInput;
+        highValuePanel.Children.Add(highColorInput);
+        highValuePanel.Children.Add(new TextBlock { Text = "Порог >", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        var highThresholdInput = new NumericUpDown
+        {
+            Minimum = -100000,
+            Maximum = 100000,
+            Value = DisplaySettings.HighThreshold.HasValue ? (decimal)DisplaySettings.HighThreshold.Value : 80,
+            Width = 80,
+            Increment = 10
+        };
+        _highThresholdInput = highThresholdInput;
+        highValuePanel.Children.Add(highThresholdInput);
+        numericColorsPanel.Children.Add(highValuePanel);
+
+        colorSettingsPanel.Children.Add(numericColorsPanel);
+        displaySettingsPanel.Children.Add(colorSettingsPanel);
+
+        stack.Children.Add(displaySettingsPanel);
+
+        // Разделитель
+        stack.Children.Add(new Separator { Margin = new Thickness(0, 10, 0, 5) });
+
         // Кнопки управления (в сетке 2x2 для красивого расположения)
         var actionsGrid = new Grid
         {
@@ -677,6 +1007,78 @@ public partial class ImageButton : UserControl
         }
     }
 
+    private void SaveDisplaySettingsFromUI()
+    {
+        if (DisplaySettings == null)
+            DisplaySettings = new DisplaySettings();
+
+        if (_showValueCheckBox != null)
+            DisplaySettings.ShowValue = _showValueCheckBox.IsChecked ?? false;
+        
+        if (_registerAddressInput?.Value != null)
+            DisplaySettings.RegisterAddress = (ushort)_registerAddressInput.Value.Value;
+        
+        if (_registerTypeCombo?.SelectedItem is ComboBoxItem regTypeItem && regTypeItem.Tag is RegisterType selectedRegType)
+            DisplaySettings.RegisterType = selectedRegType;
+        
+        if (_dataTypeCombo?.SelectedItem is ComboBoxItem dataTypeItem && dataTypeItem.Tag is DataType selectedDataType)
+            DisplaySettings.DataType = selectedDataType;
+        
+        if (_scaleInput?.Value != null)
+            DisplaySettings.Scale = (double)_scaleInput.Value.Value;
+        
+        if (_offsetInput?.Value != null)
+            DisplaySettings.Offset = (double)_offsetInput.Value.Value;
+        
+        if (_minValueInput != null)
+            DisplaySettings.MinValue = (double?)_minValueInput.Value;
+        
+        if (_maxValueInput != null)
+            DisplaySettings.MaxValue = (double?)_maxValueInput.Value;
+        
+        if (_unitInput != null)
+            DisplaySettings.Unit = _unitInput.Text ?? string.Empty;
+        
+        if (_showUnitCheckBox != null)
+            DisplaySettings.ShowUnit = _showUnitCheckBox.IsChecked ?? true;
+        
+        if (_decimalPlacesInput?.Value != null)
+            DisplaySettings.DecimalPlaces = (int)_decimalPlacesInput.Value.Value;
+        
+        if (_colorByStateCheckBox != null)
+            DisplaySettings.ColorByState = _colorByStateCheckBox.IsChecked ?? false;
+        
+        if (_offColorInput != null)
+            DisplaySettings.OffStateColor = _offColorInput.Text ?? "#808080";
+        
+        if (_onColorInput != null)
+            DisplaySettings.OnStateColor = _onColorInput.Text ?? "#00FF00";
+        
+        if (_offTextInput != null)
+            DisplaySettings.OffStateText = _offTextInput.Text ?? "OFF";
+        
+        if (_onTextInput != null)
+            DisplaySettings.OnStateText = _onTextInput.Text ?? "ON";
+        
+        if (_useStateTextCheckBox != null)
+            DisplaySettings.UseStateText = _useStateTextCheckBox.IsChecked ?? false;
+        
+        if (_lowColorInput != null)
+            DisplaySettings.LowValueColor = _lowColorInput.Text ?? "#0000FF";
+        
+        if (_normalColorInput != null)
+            DisplaySettings.NormalValueColor = _normalColorInput.Text ?? "#00FF00";
+        
+        if (_highColorInput != null)
+            DisplaySettings.HighValueColor = _highColorInput.Text ?? "#FF0000";
+        
+        if (_lowThresholdInput != null)
+            DisplaySettings.LowThreshold = (double?)_lowThresholdInput.Value;
+        
+        if (_highThresholdInput != null)
+            DisplaySettings.HighThreshold = (double?)_highThresholdInput.Value;
+    }
+
     private void ShowTagSelectionInDialog(StackPanel stack, Window dialog, TextBox labelInput, TextBox iconOnInput, TextBox iconOffInput, NumericUpDown widthInput, NumericUpDown heightInput, ComboBox buttonTypeCombo, CheckBox showLabelCheckBox)
     {
         var label = new TextBlock 
@@ -757,6 +1159,9 @@ public partial class ImageButton : UserControl
             // Сохраняем видимость надписи
             ShowLabel = showLabelCheckBox.IsChecked ?? true;
             
+            // Сохраняем настройки отображения регистра
+            SaveDisplaySettingsFromUI();
+            
             if (combo.SelectedItem is ComboBoxItem item && item.Tag is TagDefinition selectedTag)
             {
                 SelectedTag = selectedTag;
@@ -821,6 +1226,9 @@ public partial class ImageButton : UserControl
             
             // Сохраняем видимость надписи
             ShowLabel = showLabelCheckBox.IsChecked ?? true;
+            
+            // Сохраняем настройки отображения регистра
+            SaveDisplaySettingsFromUI();
             
             dialog.Close();
         };
@@ -893,231 +1301,6 @@ public partial class ImageButton : UserControl
             await dialog.ShowDialog(owner);
         }
     }
-}
-
-public class ImageTypeToShapeConverter : IValueConverter
-{
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        if (value is not ImageButtonType type) return null;
-
-        return type switch
-        {
-            ImageButtonType.Motor => CreateMotorShape(),
-            ImageButtonType.Valve => CreateValveShape(),
-            ImageButtonType.Fan => CreateFanShape(),
-            ImageButtonType.Heater => CreateHeaterShape(),
-            ImageButtonType.Light => CreateLightShape(),
-            _ => CreateMotorShape()
-        };
-    }
-
-    private static Canvas CreateMotorShape()
-    {
-        var canvas = new Canvas { Width = 100, Height = 80 };
-        
-        // Корпус мотора
-        var body = new Rectangle
-        {
-            Width = 60,
-            Height = 50,
-            Fill = Brushes.SteelBlue,
-            Stroke = Brushes.DarkSlateGray,
-            StrokeThickness = 2,
-            RadiusX = 5,
-            RadiusY = 5
-        };
-        Canvas.SetLeft(body, 20);
-        Canvas.SetTop(body, 15);
-        
-        // Вал
-        var shaft = new Rectangle
-        {
-            Width = 30,
-            Height = 8,
-            Fill = Brushes.DimGray,
-            Stroke = Brushes.Black,
-            StrokeThickness = 1
-        };
-        Canvas.SetLeft(shaft, 70);
-        Canvas.SetTop(shaft, 36);
-        
-        // Буква M
-        var label = new TextBlock
-        {
-            Text = "M",
-            FontSize = 24,
-            FontWeight = FontWeight.Bold,
-            Foreground = Brushes.White
-        };
-        Canvas.SetLeft(label, 40);
-        Canvas.SetTop(label, 25);
-        
-        canvas.Children.Add(body);
-        canvas.Children.Add(shaft);
-        canvas.Children.Add(label);
-        
-        return canvas;
-    }
-
-    private static Canvas CreateValveShape()
-    {
-        var canvas = new Canvas { Width = 100, Height = 80 };
-        
-        // Труба слева
-        var pipeLeft = new Rectangle
-        {
-            Width = 30,
-            Height = 12,
-            Fill = Brushes.Gray,
-            Stroke = Brushes.Black,
-            StrokeThickness = 1
-        };
-        Canvas.SetLeft(pipeLeft, 10);
-        Canvas.SetTop(pipeLeft, 34);
-        
-        // Корпус клапана
-        var body = new Polygon
-        {
-            Points = new Points { new Point(40, 20), new Point(60, 20), new Point(70, 40), new Point(60, 60), new Point(40, 60), new Point(30, 40) },
-            Fill = Brushes.DarkOrange,
-            Stroke = Brushes.Black,
-            StrokeThickness = 2
-        };
-        
-        // Труба справа
-        var pipeRight = new Rectangle
-        {
-            Width = 30,
-            Height = 12,
-            Fill = Brushes.Gray,
-            Stroke = Brushes.Black,
-            StrokeThickness = 1
-        };
-        Canvas.SetLeft(pipeRight, 60);
-        Canvas.SetTop(pipeRight, 34);
-        
-        canvas.Children.Add(pipeLeft);
-        canvas.Children.Add(body);
-        canvas.Children.Add(pipeRight);
-        
-        return canvas;
-    }
-
-    private static Canvas CreateFanShape()
-    {
-        var canvas = new Canvas { Width = 100, Height = 80 };
-        
-        // Корпус
-        var housing = new Ellipse
-        {
-            Width = 60,
-            Height = 60,
-            Fill = Brushes.LightSteelBlue,
-            Stroke = Brushes.DarkSlateGray,
-            StrokeThickness = 2
-        };
-        Canvas.SetLeft(housing, 20);
-        Canvas.SetTop(housing, 10);
-        
-        // Центр
-        var center = new Ellipse
-        {
-            Width = 15,
-            Height = 15,
-            Fill = Brushes.DarkGray
-        };
-        Canvas.SetLeft(center, 42.5);
-        Canvas.SetTop(center, 32.5);
-        
-        // Лопасти (упрощенно - буква F)
-        var label = new TextBlock
-        {
-            Text = "F",
-            FontSize = 28,
-            FontWeight = FontWeight.Bold,
-            Foreground = Brushes.DarkSlateGray
-        };
-        Canvas.SetLeft(label, 41);
-        Canvas.SetTop(label, 22);
-        
-        canvas.Children.Add(housing);
-        canvas.Children.Add(label);
-        canvas.Children.Add(center);
-        
-        return canvas;
-    }
-
-    private static Canvas CreateHeaterShape()
-    {
-        var canvas = new Canvas { Width = 100, Height = 80 };
-        
-        // Корпус нагревателя
-        var body = new Rectangle
-        {
-            Width = 60,
-            Height = 50,
-            Fill = Brushes.OrangeRed,
-            Stroke = Brushes.DarkRed,
-            StrokeThickness = 2,
-            RadiusX = 5,
-            RadiusY = 5
-        };
-        Canvas.SetLeft(body, 20);
-        Canvas.SetTop(body, 15);
-        
-        // Символ нагрева (волны)
-        var wave1 = new TextBlock
-        {
-            Text = "≈",
-            FontSize = 32,
-            FontWeight = FontWeight.Bold,
-            Foreground = Brushes.Yellow
-        };
-        Canvas.SetLeft(wave1, 38);
-        Canvas.SetTop(wave1, 20);
-        
-        canvas.Children.Add(body);
-        canvas.Children.Add(wave1);
-        
-        return canvas;
-    }
-
-    private static Canvas CreateLightShape()
-    {
-        var canvas = new Canvas { Width = 100, Height = 80 };
-        
-        // Лампа
-        var bulb = new Ellipse
-        {
-            Width = 50,
-            Height = 50,
-            Fill = Brushes.Gold,
-            Stroke = Brushes.DarkGoldenrod,
-            StrokeThickness = 2
-        };
-        Canvas.SetLeft(bulb, 25);
-        Canvas.SetTop(bulb, 10);
-        
-        // Цоколь
-        var base1 = new Rectangle
-        {
-            Width = 30,
-            Height = 15,
-            Fill = Brushes.Gray,
-            Stroke = Brushes.Black,
-            StrokeThickness = 1
-        };
-        Canvas.SetLeft(base1, 35);
-        Canvas.SetTop(base1, 55);
-        
-        canvas.Children.Add(bulb);
-        canvas.Children.Add(base1);
-        
-        return canvas;
-    }
-
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
 }
 
 public class ActiveStateBackgroundConverter : IValueConverter

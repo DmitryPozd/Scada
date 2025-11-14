@@ -347,41 +347,38 @@ public partial class MainWindow : Window
                     control = momentaryAsCoilBtn;
                     break;
                 case CoilElement imgElem when imgElem.Type == ElementType.ImageButton:
-                    if (Enum.TryParse<ImageButtonType>(imgElem.ImageType, out var imgType))
+                    var imgBtn = new ImageButton
                     {
-                        var imgBtn = new ImageButton
-                        {
-                            Label = imgElem.Label,
-                            CoilAddress = imgElem.CoilAddress,
-                            ButtonType = imgElem.ButtonType,
-                            ImageType = imgType,
-                            AvailableTags = GetFilteredTagsForImageButton(vm.ConnectionConfig.Tags),
-                            IconPathOn = imgElem.IconPathOn,
-                            IconPathOff = imgElem.IconPathOff,
-                            ButtonWidth = imgElem.ButtonWidth ?? 100.0,
-                            ButtonHeight = imgElem.ButtonHeight ?? 120.0,
-                            ShowLabel = imgElem.ShowLabel
-                        };
-                        if (!string.IsNullOrEmpty(imgElem.TagName))
-                        {
-                            imgBtn.SelectedTag = vm.ConnectionConfig.Tags.FirstOrDefault(t => t.Name == imgElem.TagName);
-                        }
-                        imgBtn.OnCommand = ReactiveCommand.CreateFromTask(async () =>
-                        {
-                            await vm.WriteCoilAsync(imgBtn.CoilAddress, true);
-                            imgBtn.IsActive = true;
-                        });
-                        imgBtn.OffCommand = ReactiveCommand.CreateFromTask(async () =>
-                        {
-                            await vm.WriteCoilAsync(imgBtn.CoilAddress, false);
-                            imgBtn.IsActive = false;
-                        });
-                        imgBtn.CopyRequested += OnButtonCopyRequested;
-                        imgBtn.PasteRequested += OnButtonPasteRequested;
-                        imgBtn.DeleteRequested += OnButtonDeleteRequested;
-                        imgBtn.TagChanged += OnButtonTagChanged; // Подписка на изменение тега
-                        control = imgBtn;
+                        Label = imgElem.Label,
+                        CoilAddress = imgElem.CoilAddress,
+                        ButtonType = imgElem.ButtonType,
+                        AvailableTags = GetFilteredTagsForImageButton(vm.ConnectionConfig.Tags),
+                        IconPathOn = imgElem.IconPathOn,
+                        IconPathOff = imgElem.IconPathOff,
+                        ButtonWidth = imgElem.ButtonWidth ?? 100.0,
+                        ButtonHeight = imgElem.ButtonHeight ?? 120.0,
+                        ShowLabel = imgElem.ShowLabel,
+                        DisplaySettings = imgElem.DisplaySettings
+                    };
+                    if (!string.IsNullOrEmpty(imgElem.TagName))
+                    {
+                        imgBtn.SelectedTag = vm.ConnectionConfig.Tags.FirstOrDefault(t => t.Name == imgElem.TagName);
                     }
+                    imgBtn.OnCommand = ReactiveCommand.CreateFromTask(async () =>
+                    {
+                        await vm.WriteCoilAsync(imgBtn.CoilAddress, true);
+                        imgBtn.IsActive = true;
+                    });
+                    imgBtn.OffCommand = ReactiveCommand.CreateFromTask(async () =>
+                    {
+                        await vm.WriteCoilAsync(imgBtn.CoilAddress, false);
+                        imgBtn.IsActive = false;
+                    });
+                    imgBtn.CopyRequested += OnButtonCopyRequested;
+                    imgBtn.PasteRequested += OnButtonPasteRequested;
+                    imgBtn.DeleteRequested += OnButtonDeleteRequested;
+                    imgBtn.TagChanged += OnButtonTagChanged;
+                    control = imgBtn;
                     break;
                 case PumpElement pumpElem:
                     control = new PumpControl { Label = pumpElem.Label };
@@ -560,13 +557,12 @@ public partial class MainWindow : Window
         var newX = info.X + 20;
         var newY = info.Y + 20;
         Control buttonControl;
-        if (info.IsImageButton && Enum.TryParse<ImageButtonType>(info.ImageType, out var imgType))
+        if (info.IsImageButton)
         {
             var newButton = new ImageButton
             {
                 Label = newLabel,
                 CoilAddress = info.CoilAddress,
-                ImageType = imgType,
                 AvailableTags = GetFilteredTagsForImageButton(vm.ConnectionConfig.Tags)
             };
             newButton.OnCommand = ReactiveCommand.CreateFromTask(async () =>
@@ -847,12 +843,13 @@ public partial class MainWindow : Window
                     CoilAddress = imgBtn.CoilAddress,
                     TagName = imgBtn.SelectedTag?.Name,
                     ButtonType = imgBtn.ButtonType,
-                    ImageType = imgBtn.ImageType.ToString(),
+                    ImageType = string.Empty,
                     IconPathOn = imgBtn.IconPathOn,
                     IconPathOff = imgBtn.IconPathOff,
                     ButtonWidth = imgBtn.ButtonWidth,
                     ButtonHeight = imgBtn.ButtonHeight,
-                    ShowLabel = imgBtn.ShowLabel
+                    ShowLabel = imgBtn.ShowLabel,
+                    DisplaySettings = imgBtn.DisplaySettings
                 };
             }
             else if (element is PumpControl pump)
@@ -1072,24 +1069,10 @@ public partial class MainWindow : Window
             dialog.Close();
         };
 
-        var imageMotorBtn = CreateMenuButton("⚙️ Мотор (ImageButton)", "Графический элемент управления мотором");
-        imageMotorBtn.Click += (s, e) =>
+        var imageButtonBtn = CreateMenuButton("🖼️ Графическая кнопка", "Универсальная кнопка с изображением и отображением данных регистра");
+        imageButtonBtn.Click += (s, e) =>
         {
-            CreateElementAtLastPosition(ElementType.ImageButton, ImageButtonType.Motor);
-            dialog.Close();
-        };
-
-        var imageValveBtn = CreateMenuButton("🔧 Клапан (ImageButton)", "Графический элемент управления клапаном");
-        imageValveBtn.Click += (s, e) =>
-        {
-            CreateElementAtLastPosition(ElementType.ImageButton, ImageButtonType.Valve);
-            dialog.Close();
-        };
-
-        var imageFanBtn = CreateMenuButton("🌀 Вентилятор (ImageButton)", "Графический элемент управления вентилятором");
-        imageFanBtn.Click += (s, e) =>
-        {
-            CreateElementAtLastPosition(ElementType.ImageButton, ImageButtonType.Fan);
+            CreateElementAtLastPosition(ElementType.ImageButton);
             dialog.Close();
         };
 
@@ -1122,9 +1105,7 @@ public partial class MainWindow : Window
         };
 
         stack.Children.Add(coilButtonBtn);
-        stack.Children.Add(imageMotorBtn);
-        stack.Children.Add(imageValveBtn);
-        stack.Children.Add(imageFanBtn);
+        stack.Children.Add(imageButtonBtn);
         stack.Children.Add(sliderBtn);
         stack.Children.Add(numericInputBtn);
         stack.Children.Add(displayBtn);
@@ -1179,7 +1160,7 @@ public partial class MainWindow : Window
         return button;
     }
 
-    private async void CreateElementAtLastPosition(ElementType elementType, ImageButtonType? imageType = null)
+    private async void CreateElementAtLastPosition(ElementType elementType)
     {
         if (DataContext is not MainWindowViewModel vm)
             return;
@@ -1244,12 +1225,11 @@ public partial class MainWindow : Window
                 control = momentaryAsBtn;
                 break;
 
-            case ElementType.ImageButton when imageType.HasValue:
+            case ElementType.ImageButton:
                 var imgBtn = new ImageButton
                 {
-                    Label = $"{imageType} {_dynamicButtonCounter++}",
+                    Label = $"ImageButton {_dynamicButtonCounter++}",
                     CoilAddress = 0,
-                    ImageType = imageType.Value,
                     AvailableTags = GetFilteredTagsForImageButton(vm.ConnectionConfig.Tags)
                 };
                 imgBtn.OnCommand = ReactiveCommand.CreateFromTask(async () =>

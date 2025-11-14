@@ -64,24 +64,37 @@
             </Image.Source>
           </Image>
           
-          <!-- Стандартная графика (если нет иконок) -->
-          <Viewbox>
-            <Viewbox.IsVisible>
+          <!-- Текстовое поле для информации о регистре (всегда видно) -->
+          <Border VerticalAlignment="Center" 
+                  HorizontalAlignment="Center"
+                  Background="#B0000000"
+                  Padding="8"
+                  CornerRadius="4"
+                  IsVisible="{Binding DisplaySettings.ShowValue, RelativeSource={RelativeSource AncestorType=controls:ImageButton}}">
+            <TextBlock Text="{Binding DisplayValue, RelativeSource={RelativeSource AncestorType=controls:ImageButton}}"
+                       FontSize="16"
+                       FontWeight="Bold"
+                       Foreground="White"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       HorizontalAlignment="Center"/>
+          </Border>
+          
+          <!-- Placeholder текст когда нет изображений -->
+          <TextBlock Text="Нет изображения&#x0a;(настройте в контекстном меню)"
+                     FontSize="12"
+                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                     TextAlignment="Center"
+                     TextWrapping="Wrap"
+                     VerticalAlignment="Center"
+                     HorizontalAlignment="Center">
+            <TextBlock.IsVisible>
               <MultiBinding Converter="{x:Static BoolConverters.And}">
                 <Binding Path="IconPathOn" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static ObjectConverters.IsNull}" />
                 <Binding Path="IconPathOff" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}" Converter="{x:Static ObjectConverters.IsNull}" />
               </MultiBinding>
-            </Viewbox.IsVisible>
-            <ContentControl Name="DefaultShape">
-              <ContentControl.Content>
-                <Binding Path="ImageType" RelativeSource="{RelativeSource AncestorType=controls:ImageButton}">
-                  <Binding.Converter>
-                    <controls:ImageTypeToShapeConverter/>
-                  </Binding.Converter>
-                </Binding>
-              </ContentControl.Content>
-            </ContentControl>
-          </Viewbox>
+            </TextBlock.IsVisible>
+          </TextBlock>
         </Grid>
       </Border>
     </Grid>

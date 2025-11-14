@@ -55,6 +55,7 @@ public class CoilElement : MnemoschemeElement
     public double? ButtonWidth { get; set; } // Ширина для ImageButton
     public double? ButtonHeight { get; set; } // Высота для ImageButton
     public bool ShowLabel { get; set; } = true; // Показывать надпись на кнопке
+    public DisplaySettings? DisplaySettings { get; set; } // Настройки отображения значения регистра для ImageButton
 }
 
 /// <summary>

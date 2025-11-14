@@ -167,7 +167,6 @@
                     <!-- ImageButton Motor -->
                     <controls:DraggableControl X="50" Y="320">
                         <controls:ImageButton Label="Мотор"
-                                             ImageType="Motor"
                                              IsActive="{Binding MotorActive}"
                                              CoilAddress="{Binding MotorAddress, Mode=TwoWay}"
                                              AvailableTags="{Binding ConnectionConfig.Tags}"
@@ -178,7 +177,6 @@
                     <!-- ImageButton Valve -->
                     <controls:DraggableControl X="300" Y="320">
                         <controls:ImageButton Label="Клапан"
-                                             ImageType="Valve"
                                              IsActive="{Binding ValveActive}"
                                              CoilAddress="{Binding ValveAddress, Mode=TwoWay}"
                                              AvailableTags="{Binding ConnectionConfig.Tags}"
@@ -189,7 +187,6 @@
                     <!-- ImageButton Fan -->
                     <controls:DraggableControl X="550" Y="320">
                         <controls:ImageButton Label="Вентилятор"
-                                             ImageType="Fan"
                                              IsActive="{Binding FanActive}"
                                              CoilAddress="{Binding FanAddress, Mode=TwoWay}"
                                              AvailableTags="{Binding ConnectionConfig.Tags}"
