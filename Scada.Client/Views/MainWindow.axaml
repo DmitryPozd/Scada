@@ -111,19 +111,7 @@
                             Background="{DynamicResource LayerFillColorDefaultBrush}" 
                             ClipToBounds="True">
                     
-                    <!-- Pump Control -->
-                    <controls:DraggableControl X="50" Y="50">
-                        <controls:PumpControl Label="Насос 1"
-                                              IsRunning="{Binding Pump1Running}"
-                                              HasAlarm="{Binding Pump1Alarm}"/>
-                    </controls:DraggableControl>
 
-                    <!-- Valve Control -->
-                    <controls:DraggableControl X="300" Y="50">
-                        <controls:ValveControl Label="Клапан 1"
-                                                OpenPercent="{Binding Valve1OpenPercent}"
-                                                HasAlarm="False"/>
-                    </controls:DraggableControl>
 
                     <!-- CoilButton 1 -->
                     <controls:DraggableControl X="50" Y="200">
@@ -165,15 +153,7 @@
                                              OffCommand="{Binding MotorOffCommand}"/>
                     </controls:DraggableControl>
 
-                    <!-- ImageButton Valve -->
-                    <controls:DraggableControl X="300" Y="320">
-                        <controls:ImageButton Label="Клапан"
-                                             IsActive="{Binding ValveActive}"
-                                             CoilAddress="{Binding ValveAddress, Mode=TwoWay}"
-                                             AvailableTags="{Binding ConnectionConfig.Tags}"
-                                             OnCommand="{Binding ValveOnCommand}"
-                                             OffCommand="{Binding ValveOffCommand}"/>
-                    </controls:DraggableControl>
+
 
                     <!-- ImageButton Fan -->
                     <controls:DraggableControl X="550" Y="320">

@@ -403,6 +403,8 @@ public partial class MainWindow : Window
                         MinValue = sliderElem.MinValue,
                         MaxValue = sliderElem.MaxValue,
                         CurrentValue = sliderElem.MinValue,
+                        ControlWidth = sliderElem.Width,
+                        ControlHeight = sliderElem.Height,
                         AvailableTags = GetFilteredTagsForHoldingRegister(vm.ConnectionConfig.Tags)
                     };
                     if (!string.IsNullOrEmpty(sliderElem.TagName))
@@ -454,6 +456,8 @@ public partial class MainWindow : Window
                         RegisterAddress = displayElem.RegisterAddress,
                         DisplayValue = "0",
                         Unit = displayElem.Unit,
+                        ControlWidth = displayElem.Width,
+                        ControlHeight = displayElem.Height,
                         AvailableTags = GetFilteredTagsForInputRegister(vm.ConnectionConfig.Tags)
                     };
                     if (!string.IsNullOrEmpty(displayElem.TagName))
@@ -469,8 +473,8 @@ public partial class MainWindow : Window
                     {
                         Label = imageElem.Label,
                         ImagePath = imageElem.ImagePath,
-                        Width = imageElem.Width,
-                        Height = imageElem.Height,
+                        ImageWidth = imageElem.Width,
+                        ImageHeight = imageElem.Height,
                         ShowLabel = imageElem.ShowLabel
                     };
                     imageCtrl.DeleteRequested += OnButtonDeleteRequested;
@@ -924,7 +928,9 @@ public partial class MainWindow : Window
                     TagName = slider.SelectedTag?.Name,
                     MinValue = slider.MinValue,
                     MaxValue = slider.MaxValue,
-                    Unit = ""
+                    Unit = "",
+                    Width = slider.ControlWidth,
+                    Height = slider.ControlHeight
                 };
             }
             else if (element is NumericInputControl numeric)
@@ -950,7 +956,9 @@ public partial class MainWindow : Window
                     Label = display.Label,
                     RegisterAddress = display.RegisterAddress,
                     TagName = display.SelectedTag?.Name,
-                    Unit = display.Unit
+                    Unit = display.Unit,
+                    Width = display.ControlWidth,
+                    Height = display.ControlHeight
                 };
             }
             else if (element is ImageControl imageCtrl)
@@ -961,8 +969,8 @@ public partial class MainWindow : Window
                     Y = draggable.Y,
                     Label = imageCtrl.Label,
                     ImagePath = imageCtrl.ImagePath,
-                    Width = imageCtrl.Width,
-                    Height = imageCtrl.Height,
+                    Width = imageCtrl.ImageWidth,
+                    Height = imageCtrl.ImageHeight,
                     ShowLabel = imageCtrl.ShowLabel
                 };
             }

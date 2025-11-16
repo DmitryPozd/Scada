@@ -90,6 +90,8 @@ public class SliderElement : MnemoschemeElement
     public int MinValue { get; set; }
     public int MaxValue { get; set; } = 100;
     public string Unit { get; set; } = string.Empty;
+    public double Width { get; set; } = 200;
+    public double Height { get; set; } = 150;
 
     public SliderElement()
     {
@@ -122,6 +124,8 @@ public class DisplayElement : MnemoschemeElement
     public ushort RegisterAddress { get; set; }
     public string? TagName { get; set; }
     public string Unit { get; set; } = string.Empty;
+    public double Width { get; set; } = 180;
+    public double Height { get; set; } = 80;
 
     public DisplayElement()
     {

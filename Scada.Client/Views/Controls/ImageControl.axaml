@@ -1,28 +1,77 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:Scada.Client.Views.Controls"
-             x:Class="Scada.Client.Views.Controls.ImageControl">
+             x:Class="Scada.Client.Views.Controls.ImageControl"
+             Width="{Binding ImageWidth, RelativeSource={RelativeSource Self}}"
+             Height="{Binding ImageHeight, RelativeSource={RelativeSource Self}}">
   
-  <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-          BorderThickness="1"
-          Background="Transparent">
-    <Grid>
-      <!-- Изображение -->
-      <Image x:Name="ImageElement"
-             Stretch="Fill"
-             Width="{Binding ImageWidth, RelativeSource={RelativeSource AncestorType=controls:ImageControl}}"
-             Height="{Binding ImageHeight, RelativeSource={RelativeSource AncestorType=controls:ImageControl}}"/>
-      
-      <!-- Подпись внизу (опционально) -->
-      <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:ImageControl}}"
-                 VerticalAlignment="Bottom"
+  <!-- Внешний Grid для маркеров -->
+  <Grid>
+    <!-- Внутренний Grid с содержимым -->
+    <Grid RowDefinitions="Auto,*">
+      <!-- Надпись над элементом -->
+      <TextBlock Grid.Row="0"
+                 Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:ImageControl}}"
+                 FontWeight="SemiBold" 
+                 FontSize="11"
+                 TextWrapping="Wrap"
+                 TextAlignment="Center"
                  HorizontalAlignment="Center"
-                 Background="#AA000000"
-                 Foreground="White"
-                 Padding="4,2"
-                 FontSize="10"
+                 Margin="0,0,0,6"
                  IsVisible="{Binding ShowLabel, RelativeSource={RelativeSource AncestorType=controls:ImageControl}}"/>
+      
+      <!-- Основное содержимое -->
+      <Border Grid.Row="1"
+              BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+              BorderThickness="1"
+              Background="Transparent"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch">
+        <Image x:Name="ImageElement"
+               Stretch="Fill"
+               HorizontalAlignment="Stretch"
+               VerticalAlignment="Stretch"/>
+      </Border>
     </Grid>
-  </Border>
+    
+    <!-- Маркеры для изменения размера -->
+    <!-- Правый нижний угол -->
+    <Border x:Name="ResizeGripBottomRight"
+            Width="12" 
+            Height="12"
+            Background="DarkGray"
+            Opacity="0.7"
+            CornerRadius="0,0,6,0"
+            Cursor="SizeAll"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            PointerPressed="OnResizeGripPressed"
+            PointerMoved="OnResizeGripMoved"
+            PointerReleased="OnResizeGripReleased"/>
+            
+    <!-- Правый край -->
+    <Border x:Name="ResizeGripRight"
+            Width="6"
+            Background="Transparent"
+            Cursor="SizeWestEast"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Stretch"
+            Margin="0,6,0,6"
+            PointerPressed="OnResizeGripPressed"
+            PointerMoved="OnResizeGripMoved"
+            PointerReleased="OnResizeGripReleased"/>
+            
+    <!-- Нижний край -->
+    <Border x:Name="ResizeGripBottom"
+            Height="6"
+            Background="Transparent"
+            Cursor="SizeNorthSouth"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Bottom"
+            Margin="6,0,6,0"
+            PointerPressed="OnResizeGripPressed"
+            PointerMoved="OnResizeGripMoved"
+            PointerReleased="OnResizeGripReleased"/>
+  </Grid>
   
 </UserControl>

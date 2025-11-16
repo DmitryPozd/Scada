@@ -127,8 +127,8 @@ public partial class ImageControl : UserControl
     {
         base.OnPointerReleased(e);
 
-        // Правый клик - показать контекстное меню
-        if (e.InitialPressMouseButton == MouseButton.Right)
+        // Правый клик - показать контекстное меню (только если не было изменения размера)
+        if (e.InitialPressMouseButton == MouseButton.Right && !_isResizing)
         {
             _ = ShowContextMenuAsync();
             e.Handled = true;
@@ -326,5 +326,83 @@ public partial class ImageControl : UserControl
         {
             await dialog.ShowDialog(owner);
         }
+    }
+
+    // Поля для изменения размера
+    private bool _isResizing = false;
+    private Point _resizeStartPoint;
+    private double _resizeStartWidth;
+    private double _resizeStartHeight;
+    private string _resizeMode = "";
+
+    private void OnResizeGripPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Border grip)
+        {
+            _isResizing = true;
+            _resizeStartPoint = e.GetPosition(this);
+            _resizeStartWidth = ImageWidth;
+            _resizeStartHeight = ImageHeight;
+            
+            if (grip.Name == "ResizeGripBottomRight")
+                _resizeMode = "bottomright";
+            else if (grip.Name == "ResizeGripRight")
+                _resizeMode = "right";
+            else if (grip.Name == "ResizeGripBottom")
+                _resizeMode = "bottom";
+            
+            e.Pointer.Capture(grip);
+            e.Handled = true;
+        }
+    }
+
+    private void OnResizeGripMoved(object? sender, PointerEventArgs e)
+    {
+        if (_isResizing && sender is Border grip)
+        {
+            var currentPoint = e.GetPosition(this);
+            var deltaX = currentPoint.X - _resizeStartPoint.X;
+            var deltaY = currentPoint.Y - _resizeStartPoint.Y;
+
+            if (_resizeMode == "bottomright")
+            {
+                var newWidth = Math.Max(50, Math.Min(800, _resizeStartWidth + deltaX));
+                var newHeight = Math.Max(50, Math.Min(800, _resizeStartHeight + deltaY));
+                ImageWidth = newWidth;
+                ImageHeight = newHeight;
+            }
+            else if (_resizeMode == "right")
+            {
+                var newWidth = Math.Max(50, Math.Min(800, _resizeStartWidth + deltaX));
+                ImageWidth = newWidth;
+            }
+            else if (_resizeMode == "bottom")
+            {
+                var newHeight = Math.Max(50, Math.Min(800, _resizeStartHeight + deltaY));
+                ImageHeight = newHeight;
+            }
+
+            e.Handled = true;
+        }
+    }
+
+    private void OnResizeGripReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_isResizing)
+        {
+            _isResizing = false;
+            if (sender is Border grip)
+            {
+                e.Pointer.Capture(null);
+            }
+            SizeChanged?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        _isResizing = false;
     }
 }
