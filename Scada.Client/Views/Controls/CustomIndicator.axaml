@@ -1,0 +1,106 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Scada.Client.Views.Controls"
+             x:Class="Scada.Client.Views.Controls.CustomIndicator"
+             Width="{Binding IndicatorWidth, RelativeSource={RelativeSource Self}}"
+             Height="{Binding IndicatorHeight, RelativeSource={RelativeSource Self}}">
+  
+  <!-- Внешний Grid для маркеров -->
+  <Grid>
+    <!-- Внутренний Grid с содержимым -->
+    <Grid RowDefinitions="Auto,*">
+      <!-- Надпись над индикатором -->
+      <TextBlock Grid.Row="0"
+                 x:Name="LabelText"
+                 Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:CustomIndicator}}"
+                 FontWeight="SemiBold" 
+                 HorizontalAlignment="Center" 
+                 FontSize="11"
+                 TextWrapping="Wrap"
+                 TextAlignment="Center"
+                 Margin="0,0,0,6"
+                 IsVisible="{Binding ShowLabel, RelativeSource={RelativeSource AncestorType=controls:CustomIndicator}}"/>
+      
+      <!-- Основной контейнер с фоном/картинкой -->
+      <Border Grid.Row="1"
+              x:Name="BackgroundBorder" 
+              CornerRadius="8"
+              ClipToBounds="True"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch">
+        <Grid>
+          <!-- Картинка фона (если указана) -->
+          <Image x:Name="BackgroundImage"
+                 Stretch="UniformToFill"
+                 IsVisible="False"/>
+          
+          <!-- Цветной фон (если картинка не указана) -->
+          <Border x:Name="ColorBackground"
+                  Background="#2563EB"
+                  IsVisible="True"/>
+          
+          <!-- Значение с единицами измерения по центру -->
+          <Border Background="#80000000"
+                  CornerRadius="8"
+                  Padding="12"
+                  VerticalAlignment="Center"
+                  HorizontalAlignment="Center">
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Spacing="5">
+              <TextBlock Text="{Binding DisplayValue, RelativeSource={RelativeSource AncestorType=controls:CustomIndicator}}"
+                         Foreground="White"
+                         FontSize="24"
+                         FontWeight="Bold"
+                         TextAlignment="Center"/>
+              <TextBlock Text="{Binding Unit, RelativeSource={RelativeSource AncestorType=controls:CustomIndicator}}"
+                         Foreground="White"
+                         FontSize="16"
+                         VerticalAlignment="Bottom"
+                         Margin="0,0,0,4"/>
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Border>
+    </Grid>
+    
+    <!-- Маркеры для изменения размера (поверх всего) -->
+    <!-- Правый нижний угол -->
+    <Border x:Name="ResizeGripBottomRight"
+            Width="12" 
+            Height="12"
+            Background="DarkGray"
+            Opacity="0.7"
+            CornerRadius="0,0,6,0"
+            Cursor="SizeAll"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            PointerPressed="OnResizeGripPressed"
+            PointerMoved="OnResizeGripMoved"
+            PointerReleased="OnResizeGripReleased"/>
+            
+    <!-- Правый край -->
+    <Border x:Name="ResizeGripRight"
+            Width="6"
+            Background="Transparent"
+            Cursor="SizeWestEast"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Stretch"
+            Margin="0,6,0,6"
+            PointerPressed="OnResizeGripPressed"
+            PointerMoved="OnResizeGripMoved"
+            PointerReleased="OnResizeGripReleased"/>
+            
+    <!-- Нижний край -->
+    <Border x:Name="ResizeGripBottom"
+            Height="6"
+            Background="Transparent"
+            Cursor="SizeNorthSouth"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Bottom"
+            Margin="6,0,6,0"
+            PointerPressed="OnResizeGripPressed"
+            PointerMoved="OnResizeGripMoved"
+            PointerReleased="OnResizeGripReleased"/>
+  </Grid>
+</UserControl>

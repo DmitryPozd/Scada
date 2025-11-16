@@ -2,41 +2,92 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:Scada.Client.Views.Controls"
              x:Class="Scada.Client.Views.Controls.NumericInputControl"
-             x:DataType="controls:NumericInputControl">
+             x:DataType="controls:NumericInputControl"
+             Width="{Binding ControlWidth, RelativeSource={RelativeSource Self}}"
+             Height="{Binding ControlHeight, RelativeSource={RelativeSource Self}}">
     
-    <Border Background="#F5F5F5" 
-            BorderBrush="#CCCCCC" 
-            BorderThickness="1" 
-            CornerRadius="4"
-            Width="200" 
-            Height="100">
-        
-        <StackPanel Margin="10" Spacing="8">
-            <!-- Метка -->
-            <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:NumericInputControl}}" 
-                       FontWeight="SemiBold" 
-                       FontSize="13"
-                       HorizontalAlignment="Center"/>
-            
-            <!-- Поле ввода -->
-            <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                <TextBox x:Name="ValueTextBox"
-                         Text="{Binding InputValue, RelativeSource={RelativeSource AncestorType=controls:NumericInputControl}}"
-                         Width="100"
-                         Watermark="0"
-                         HorizontalContentAlignment="Right"/>
-                <TextBlock Text="{Binding Unit, RelativeSource={RelativeSource AncestorType=controls:NumericInputControl}}"
-                           VerticalAlignment="Center"
-                           Foreground="#666666"/>
-            </StackPanel>
-            
-            <!-- Кнопка записи -->
-            <Button Content="Записать" 
-                    Command="{Binding WriteCommand, RelativeSource={RelativeSource AncestorType=controls:NumericInputControl}}"
-                    HorizontalAlignment="Center"
-                    Padding="20,4"/>
+  <!-- Внешний Grid для маркеров -->
+  <Grid>
+    <!-- Внутренний Grid с содержимым -->
+    <Grid RowDefinitions="Auto,*">
+      <!-- Надпись над элементом -->
+      <TextBlock Grid.Row="0"
+                 Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:NumericInputControl}}" 
+                 FontWeight="SemiBold" 
+                 FontSize="11"
+                 TextWrapping="Wrap"
+                 TextAlignment="Center"
+                 HorizontalAlignment="Center"
+                 Margin="0,0,0,6"/>
+      
+      <!-- Основное содержимое -->
+      <Border Grid.Row="1"
+              Background="#F5F5F5" 
+              BorderBrush="#CCCCCC" 
+              BorderThickness="1" 
+              CornerRadius="4"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch">
+        <StackPanel Margin="10" Spacing="8" VerticalAlignment="Center">
+          <!-- Поле ввода -->
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <TextBox x:Name="ValueTextBox"
+                     Text="{Binding InputValue, RelativeSource={RelativeSource AncestorType=controls:NumericInputControl}}"
+                     Width="100"
+                     Watermark="0"
+                     HorizontalContentAlignment="Right"/>
+            <TextBlock Text="{Binding Unit, RelativeSource={RelativeSource AncestorType=controls:NumericInputControl}}"
+                       VerticalAlignment="Center"
+                       Foreground="#666666"/>
+          </StackPanel>
+          
+          <!-- Кнопка записи -->
+          <Button Content="Записать" 
+                  Command="{Binding WriteCommand, RelativeSource={RelativeSource AncestorType=controls:NumericInputControl}}"
+                  HorizontalAlignment="Center"
+                  Padding="20,4"/>
         </StackPanel>
-        
-    </Border>
+      </Border>
+    </Grid>
+    
+    <!-- Маркеры для изменения размера -->
+    <!-- Правый нижний угол -->
+    <Border x:Name="ResizeGripBottomRight"
+            Width="12" 
+            Height="12"
+            Background="DarkGray"
+            Opacity="0.7"
+            CornerRadius="0,0,6,0"
+            Cursor="SizeAll"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            PointerPressed="OnResizeGripPressed"
+            PointerMoved="OnResizeGripMoved"
+            PointerReleased="OnResizeGripReleased"/>
+            
+    <!-- Правый край -->
+    <Border x:Name="ResizeGripRight"
+            Width="6"
+            Background="Transparent"
+            Cursor="SizeWestEast"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Stretch"
+            Margin="0,6,0,6"
+            PointerPressed="OnResizeGripPressed"
+            PointerMoved="OnResizeGripMoved"
+            PointerReleased="OnResizeGripReleased"/>
+            
+    <!-- Нижний край -->
+    <Border x:Name="ResizeGripBottom"
+            Height="6"
+            Background="Transparent"
+            Cursor="SizeNorthSouth"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Bottom"
+            Margin="6,0,6,0"
+            PointerPressed="OnResizeGripPressed"
+            PointerMoved="OnResizeGripMoved"
+            PointerReleased="OnResizeGripReleased"/>
+  </Grid>
     
 </UserControl>

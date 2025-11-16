@@ -243,6 +243,15 @@ public partial class MainWindow : Window
                         System.Diagnostics.Debug.WriteLine($"  Skipping NumericInputControl at address {numeric.RegisterAddress} - user is editing");
                     }
                 }
+                else if (draggable.Content is CustomIndicator customIndicator)
+                {
+                    if (registerValues.TryGetValue(customIndicator.RegisterAddress, out ushort value))
+                    {
+                        customIndicator.DisplayValue = value.ToString();
+                        updatedCount++;
+                        System.Diagnostics.Debug.WriteLine($"  Updated CustomIndicator at address {customIndicator.RegisterAddress} to {value}");
+                    }
+                }
             }
         }
         System.Diagnostics.Debug.WriteLine($"OnRegisterTagsUpdated: updated {updatedCount} controls");
@@ -386,15 +395,6 @@ public partial class MainWindow : Window
                 case ValveElement valveElem:
                     control = new ValveControl { Label = valveElem.Label };
                     break;
-                case SensorElement sensorElem:
-                    control = new SensorIndicator
-                    {
-                        Label = sensorElem.Label,
-                        Unit = sensorElem.Unit,
-                        ThresholdLow = sensorElem.ThresholdLow,
-                        ThresholdHigh = sensorElem.ThresholdHigh
-                    };
-                    break;
                 case SliderElement sliderElem:
                     var slider = new SliderControl
                     {
@@ -424,6 +424,8 @@ public partial class MainWindow : Window
                         RegisterAddress = numericElem.RegisterAddress,
                         InputValue = "0",
                         Unit = numericElem.Unit,
+                        ControlWidth = numericElem.Width,
+                        ControlHeight = numericElem.Height,
                         AvailableTags = GetFilteredTagsForHoldingRegister(vm.ConnectionConfig.Tags)
                     };
                     if (!string.IsNullOrEmpty(numericElem.TagName))
@@ -474,6 +476,31 @@ public partial class MainWindow : Window
                     imageCtrl.DeleteRequested += OnButtonDeleteRequested;
                     control = imageCtrl;
                     break;
+                case CustomIndicatorElement customIndElem:
+                    var customInd = new CustomIndicator
+                    {
+                        Label = customIndElem.Label,
+                        BackgroundImagePath = customIndElem.BackgroundImagePath,
+                        BackgroundColor = customIndElem.BackgroundColor,
+                        IndicatorWidth = customIndElem.Width,
+                        IndicatorHeight = customIndElem.Height,
+                        ShowLabel = customIndElem.ShowLabel,
+                        RegisterAddress = customIndElem.RegisterAddress,
+                        Unit = customIndElem.Unit,
+                        AvailableTags = GetFilteredTagsForInputRegister(vm.ConnectionConfig.Tags)
+                    };
+                    if (!string.IsNullOrEmpty(customIndElem.TagName))
+                    {
+                        customInd.SelectedTag = vm.ConnectionConfig.Tags.FirstOrDefault(t => t.Name == customIndElem.TagName);
+                    }
+                    customInd.DeleteRequested += OnButtonDeleteRequested;
+                    customInd.ImageChanged += OnButtonTagChanged;
+                    customInd.LabelChanged += OnButtonTagChanged;
+                    customInd.ColorChanged += OnButtonTagChanged;
+                    customInd.SizeChangedCustom += OnButtonTagChanged;
+                    customInd.TagChanged += OnButtonTagChanged;
+                    control = customInd;
+                    break;
             }
             if (control != null)
             {
@@ -482,6 +509,22 @@ public partial class MainWindow : Window
                     X = element.X,
                     Y = element.Y,
                     Content = control
+                };
+                draggable.PositionChanged += async (s, e) =>
+                {
+                    if (DataContext is MainWindowViewModel mainVm)
+                    {
+                        CollectMnemoschemeElements(mainVm);
+                        await mainVm.SaveConfigurationAsync();
+                    }
+                };
+                draggable.SizeChangedCustom += async (s, e) =>
+                {
+                    if (DataContext is MainWindowViewModel mainVm)
+                    {
+                        CollectMnemoschemeElements(mainVm);
+                        await mainVm.SaveConfigurationAsync();
+                    }
                 };
                 canvas.Children.Add(draggable);
             }
@@ -870,18 +913,6 @@ public partial class MainWindow : Window
                     Label = valve.Label
                 };
             }
-            else if (element is SensorIndicator sensor)
-            {
-                mnemoElement = new SensorElement
-                {
-                    X = draggable.X,
-                    Y = draggable.Y,
-                    Label = sensor.Label,
-                    Unit = sensor.Unit,
-                    ThresholdLow = sensor.ThresholdLow,
-                    ThresholdHigh = sensor.ThresholdHigh
-                };
-            }
             else if (element is SliderControl slider)
             {
                 mnemoElement = new SliderElement
@@ -905,7 +936,9 @@ public partial class MainWindow : Window
                     Label = numeric.Label,
                     RegisterAddress = numeric.RegisterAddress,
                     TagName = numeric.SelectedTag?.Name,
-                    Unit = numeric.Unit
+                    Unit = numeric.Unit,
+                    Width = numeric.ControlWidth,
+                    Height = numeric.ControlHeight
                 };
             }
             else if (element is DisplayControl display)
@@ -931,6 +964,23 @@ public partial class MainWindow : Window
                     Width = imageCtrl.Width,
                     Height = imageCtrl.Height,
                     ShowLabel = imageCtrl.ShowLabel
+                };
+            }
+            else if (element is CustomIndicator customInd)
+            {
+                mnemoElement = new CustomIndicatorElement
+                {
+                    X = draggable.X,
+                    Y = draggable.Y,
+                    Label = customInd.Label,
+                    BackgroundImagePath = customInd.BackgroundImagePath,
+                    BackgroundColor = customInd.BackgroundColor,
+                    Width = customInd.IndicatorWidth,
+                    Height = customInd.IndicatorHeight,
+                    ShowLabel = customInd.ShowLabel,
+                    RegisterAddress = customInd.RegisterAddress,
+                    TagName = customInd.SelectedTag?.Name,
+                    Unit = customInd.Unit
                 };
             }
             if (mnemoElement != null)
@@ -1104,12 +1154,20 @@ public partial class MainWindow : Window
             dialog.Close();
         };
 
+        var customIndicatorBtn = CreateMenuButton("🎨 Настраиваемый индикатор", "Индикатор с фоновой картинкой и надписью");
+        customIndicatorBtn.Click += (s, e) =>
+        {
+            CreateElementAtLastPosition(ElementType.CustomIndicator);
+            dialog.Close();
+        };
+
         stack.Children.Add(coilButtonBtn);
         stack.Children.Add(imageButtonBtn);
         stack.Children.Add(sliderBtn);
         stack.Children.Add(numericInputBtn);
         stack.Children.Add(displayBtn);
         stack.Children.Add(imageBtn);
+        stack.Children.Add(customIndicatorBtn);
 
         var cancelBtn = new Button
         {
@@ -1320,6 +1378,28 @@ public partial class MainWindow : Window
                 control = imageControl;
                 break;
 
+            case ElementType.CustomIndicator:
+                var customIndicator = new CustomIndicator
+                {
+                    Label = $"Индикатор {_dynamicButtonCounter++}",
+                    BackgroundImagePath = "",
+                    BackgroundColor = "#2563EB",
+                    IndicatorWidth = 150,
+                    IndicatorHeight = 150,
+                    ShowLabel = true,
+                    RegisterAddress = 0,
+                    Unit = "",
+                    AvailableTags = GetFilteredTagsForInputRegister(vm.ConnectionConfig.Tags)
+                };
+                customIndicator.DeleteRequested += OnButtonDeleteRequested;
+                customIndicator.ImageChanged += OnButtonTagChanged;
+                customIndicator.LabelChanged += OnButtonTagChanged;
+                customIndicator.ColorChanged += OnButtonTagChanged;
+                customIndicator.SizeChangedCustom += OnButtonTagChanged;
+                customIndicator.TagChanged += OnButtonTagChanged;
+                control = customIndicator;
+                break;
+
             default:
                 return;
         }
@@ -1329,6 +1409,18 @@ public partial class MainWindow : Window
             X = x,
             Y = y,
             Content = control
+        };
+
+        draggable.PositionChanged += async (s, e) =>
+        {
+            CollectMnemoschemeElements(vm);
+            await vm.SaveConfigurationAsync();
+        };
+        
+        draggable.SizeChangedCustom += async (s, e) =>
+        {
+            CollectMnemoschemeElements(vm);
+            await vm.SaveConfigurationAsync();
         };
 
         canvas.Children.Add(draggable);

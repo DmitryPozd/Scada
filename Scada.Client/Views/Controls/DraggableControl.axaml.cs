@@ -12,6 +12,10 @@ public partial class DraggableControl : ContentControl
     private Point _dragStartPoint;
     private bool _isDragging;
     private bool _wasDragged; // Флаг: было ли реальное перемещение
+    private bool _isResizing;
+    private Point _resizeStartPoint;
+    private Size _resizeStartSize;
+    private Border? _resizeHandle;
 
     public static readonly StyledProperty<double> XProperty =
         AvaloniaProperty.Register<DraggableControl, double>(nameof(X), 0.0);
@@ -41,12 +45,140 @@ public partial class DraggableControl : ContentControl
     {
         base.OnApplyTemplate(e);
         UpdatePosition();
+        
+        _resizeHandle = this.FindControl<Border>("ResizeHandle");
+        if (_resizeHandle != null)
+        {
+            _resizeHandle.PointerPressed += OnResizeHandlePressed;
+            _resizeHandle.PointerMoved += OnResizeHandleMoved;
+            _resizeHandle.PointerReleased += OnResizeHandleReleased;
+            
+            // Для отладки - показываем ручку сразу, если элемент изменяемый
+            if (IsResizable())
+            {
+                System.Diagnostics.Debug.WriteLine($"DraggableControl: Content is {Content?.GetType().Name}, showing resize handle");
+            }
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("DraggableControl: ResizeHandle not found!");
+        }
+    }
+
+    protected override void OnPointerEntered(PointerEventArgs e)
+    {
+        base.OnPointerEntered(e);
+        var isResizable = IsResizable();
+        System.Diagnostics.Debug.WriteLine($"DraggableControl.OnPointerEntered: Content={Content?.GetType().Name}, IsResizable={isResizable}, Handle={_resizeHandle != null}");
+        if (_resizeHandle != null && isResizable)
+        {
+            _resizeHandle.IsVisible = true;
+            System.Diagnostics.Debug.WriteLine("  -> Showing resize handle");
+        }
+    }
+
+    private bool IsResizable()
+    {
+        return Content is CustomIndicator or DisplayControl or ImageControl or ImageButton;
+    }
+
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        if (_resizeHandle != null && !_isResizing)
+        {
+            _resizeHandle.IsVisible = false;
+        }
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
         UpdatePosition();
+    }
+
+    private void OnResizeHandlePressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            var size = GetElementSize();
+            if (size.HasValue)
+            {
+                _isResizing = true;
+                _resizeStartPoint = e.GetPosition(this.Parent as Visual);
+                _resizeStartSize = size.Value;
+                e.Pointer.Capture(_resizeHandle);
+                e.Handled = true;
+            }
+        }
+    }
+
+    private Size? GetElementSize()
+    {
+        return Content switch
+        {
+            CustomIndicator ci => new Size(ci.IndicatorWidth, ci.IndicatorHeight),
+            DisplayControl dc => new Size(dc.Width, dc.Height),
+            ImageControl ic => new Size(ic.Width, ic.Height),
+            ImageButton ib => new Size(ib.ButtonWidth, ib.ButtonHeight),
+            _ => null
+        };
+    }
+
+    private void OnResizeHandleMoved(object? sender, PointerEventArgs e)
+    {
+        if (_isResizing)
+        {
+            var currentPoint = e.GetPosition(this.Parent as Visual);
+            var delta = currentPoint - _resizeStartPoint;
+
+            var newWidth = Math.Max(50, _resizeStartSize.Width + delta.X);
+            var newHeight = Math.Max(50, _resizeStartSize.Height + delta.Y);
+
+            SetElementSize(newWidth, newHeight);
+            
+            e.Handled = true;
+        }
+    }
+
+    private void SetElementSize(double width, double height)
+    {
+        switch (Content)
+        {
+            case CustomIndicator ci:
+                ci.IndicatorWidth = width;
+                ci.IndicatorHeight = height;
+                break;
+            case DisplayControl dc:
+                dc.Width = width;
+                dc.Height = height;
+                break;
+            case ImageControl ic:
+                ic.Width = width;
+                ic.Height = height;
+                break;
+            case ImageButton ib:
+                ib.ButtonWidth = width;
+                ib.ButtonHeight = height;
+                break;
+        }
+    }
+
+    private void OnResizeHandleReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_isResizing)
+        {
+            _isResizing = false;
+            e.Pointer.Capture(null);
+            
+            if (_resizeHandle != null && !IsPointerOver)
+            {
+                _resizeHandle.IsVisible = false;
+            }
+            
+            RaiseEvent(new RoutedEventArgs(SizeChangedCustomEvent));
+            e.Handled = true;
+        }
     }
 
     private void UpdatePosition()
@@ -150,5 +282,16 @@ public partial class DraggableControl : ContentControl
     {
         add => AddHandler(PositionChangedEvent, value);
         remove => RemoveHandler(PositionChangedEvent, value);
+    }
+
+    // Событие для уведомления об изменении размера
+    public static readonly RoutedEvent<RoutedEventArgs> SizeChangedCustomEvent =
+        RoutedEvent.Register<DraggableControl, RoutedEventArgs>(
+            nameof(SizeChangedCustom), RoutingStrategies.Bubble);
+
+    public event EventHandler<RoutedEventArgs> SizeChangedCustom
+    {
+        add => AddHandler(SizeChangedCustomEvent, value);
+        remove => RemoveHandler(SizeChangedCustomEvent, value);
     }
 }

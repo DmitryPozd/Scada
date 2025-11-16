@@ -125,15 +125,6 @@
                                                 HasAlarm="False"/>
                     </controls:DraggableControl>
 
-                    <!-- Sensor Indicator -->
-                    <controls:DraggableControl X="550" Y="50">
-                        <controls:SensorIndicator Label="Давление"
-                                                  Value="{Binding Sensor1Value}"
-                                                  Unit="бар"
-                                                  ThresholdLow="1.0"
-                                                  ThresholdHigh="8.0"/>
-                    </controls:DraggableControl>
-
                     <!-- CoilButton 1 -->
                     <controls:DraggableControl X="50" Y="200">
                         <controls:CoilButton Label="Кнопка 0"

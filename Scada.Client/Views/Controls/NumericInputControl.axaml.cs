@@ -41,6 +41,12 @@ public partial class NumericInputControl : UserControl
     public static readonly StyledProperty<TagDefinition?> SelectedTagProperty =
         AvaloniaProperty.Register<NumericInputControl, TagDefinition?>(nameof(SelectedTag));
 
+    public static readonly StyledProperty<double> ControlWidthProperty =
+        AvaloniaProperty.Register<NumericInputControl, double>(nameof(ControlWidth), defaultValue: 200);
+
+    public static readonly StyledProperty<double> ControlHeightProperty =
+        AvaloniaProperty.Register<NumericInputControl, double>(nameof(ControlHeight), defaultValue: 100);
+
     // События
     public static readonly RoutedEvent<RoutedEventArgs> DeleteRequestedEvent =
         RoutedEvent.Register<NumericInputControl, RoutedEventArgs>(nameof(DeleteRequested), RoutingStrategies.Bubble);
@@ -87,6 +93,18 @@ public partial class NumericInputControl : UserControl
     {
         get => GetValue(SelectedTagProperty);
         set => SetValue(SelectedTagProperty, value);
+    }
+
+    public double ControlWidth
+    {
+        get => GetValue(ControlWidthProperty);
+        set => SetValue(ControlWidthProperty, value);
+    }
+
+    public double ControlHeight
+    {
+        get => GetValue(ControlHeightProperty);
+        set => SetValue(ControlHeightProperty, value);
     }
 
     public event EventHandler<RoutedEventArgs> DeleteRequested
@@ -161,7 +179,8 @@ public partial class NumericInputControl : UserControl
     {
         base.OnPointerReleased(e);
         
-        if (e.InitialPressMouseButton == MouseButton.Right)
+        // Правый клик для настроек (только если не было изменения размера)
+        if (e.InitialPressMouseButton == MouseButton.Right && !_isResizing)
         {
             ShowContextMenu();
             e.Handled = true;
@@ -365,5 +384,88 @@ public partial class NumericInputControl : UserControl
         stack.Children.Add(tagLabel);
         stack.Children.Add(combo);
         stack.Children.Add(buttonsPanel);
+    }
+
+    // Поля для изменения размера
+    private bool _isResizing = false;
+    private Point _resizeStartPoint;
+    private double _resizeStartWidth;
+    private double _resizeStartHeight;
+    private string _resizeMode = "";
+
+    private void OnResizeGripPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Border grip)
+        {
+            _isResizing = true;
+            _resizeStartPoint = e.GetPosition(this);
+            _resizeStartWidth = ControlWidth;
+            _resizeStartHeight = ControlHeight;
+            
+            // Определяем режим изменения размера
+            if (grip.Name == "ResizeGripBottomRight")
+                _resizeMode = "bottomright";
+            else if (grip.Name == "ResizeGripRight")
+                _resizeMode = "right";
+            else if (grip.Name == "ResizeGripBottom")
+                _resizeMode = "bottom";
+            
+            e.Pointer.Capture(grip);
+            e.Handled = true;
+        }
+    }
+
+    private void OnResizeGripMoved(object? sender, PointerEventArgs e)
+    {
+        if (_isResizing && sender is Border grip)
+        {
+            var currentPoint = e.GetPosition(this);
+            var deltaX = currentPoint.X - _resizeStartPoint.X;
+            var deltaY = currentPoint.Y - _resizeStartPoint.Y;
+
+            if (_resizeMode == "bottomright")
+            {
+                // Изменение по обеим осям
+                var newWidth = Math.Max(150, Math.Min(500, _resizeStartWidth + deltaX));
+                var newHeight = Math.Max(80, Math.Min(400, _resizeStartHeight + deltaY));
+                ControlWidth = newWidth;
+                ControlHeight = newHeight;
+            }
+            else if (_resizeMode == "right")
+            {
+                // Изменение только по ширине
+                var newWidth = Math.Max(150, Math.Min(500, _resizeStartWidth + deltaX));
+                ControlWidth = newWidth;
+            }
+            else if (_resizeMode == "bottom")
+            {
+                // Изменение только по высоте
+                var newHeight = Math.Max(80, Math.Min(400, _resizeStartHeight + deltaY));
+                ControlHeight = newHeight;
+            }
+
+            e.Handled = true;
+        }
+    }
+
+    private void OnResizeGripReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_isResizing)
+        {
+            _isResizing = false;
+            if (sender is Border grip)
+            {
+                e.Pointer.Capture(null);
+            }
+            // Уведомляем об изменении для сохранения настроек
+            TagChanged?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        _isResizing = false;
     }
 }

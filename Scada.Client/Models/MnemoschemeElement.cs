@@ -13,11 +13,11 @@ public enum ElementType
     ImageButton,
     Pump,
     Valve,
-    Sensor,
     Slider,
     NumericInput,
     Display,
-    ImageControl
+    ImageControl,
+    CustomIndicator
 }
 
 /// <summary>
@@ -26,11 +26,11 @@ public enum ElementType
 [JsonDerivedType(typeof(CoilElement), typeDiscriminator: "coil")]
 [JsonDerivedType(typeof(PumpElement), typeDiscriminator: "pump")]
 [JsonDerivedType(typeof(ValveElement), typeDiscriminator: "valve")]
-[JsonDerivedType(typeof(SensorElement), typeDiscriminator: "sensor")]
 [JsonDerivedType(typeof(SliderElement), typeDiscriminator: "slider")]
 [JsonDerivedType(typeof(NumericInputElement), typeDiscriminator: "numericInput")]
 [JsonDerivedType(typeof(DisplayElement), typeDiscriminator: "display")]
 [JsonDerivedType(typeof(ImageElement), typeDiscriminator: "image")]
+[JsonDerivedType(typeof(CustomIndicatorElement), typeDiscriminator: "customIndicator")]
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 public class MnemoschemeElement
 {
@@ -81,21 +81,6 @@ public class ValveElement : MnemoschemeElement
 }
 
 /// <summary>
-/// Элемент датчика
-/// </summary>
-public class SensorElement : MnemoschemeElement
-{
-    public string Unit { get; set; } = string.Empty;
-    public double? ThresholdLow { get; set; }
-    public double? ThresholdHigh { get; set; }
-
-    public SensorElement()
-    {
-        Type = ElementType.Sensor;
-    }
-}
-
-/// <summary>
 /// Элемент ползунка для Holding Register
 /// </summary>
 public class SliderElement : MnemoschemeElement
@@ -120,6 +105,8 @@ public class NumericInputElement : MnemoschemeElement
     public ushort RegisterAddress { get; set; }
     public string? TagName { get; set; }
     public string Unit { get; set; } = string.Empty;
+    public double Width { get; set; } = 200;
+    public double Height { get; set; } = 100;
 
     public NumericInputElement()
     {
@@ -155,5 +142,25 @@ public class ImageElement : MnemoschemeElement
     public ImageElement()
     {
         Type = ElementType.ImageControl;
+    }
+}
+
+/// <summary>
+/// Элемент настраиваемого индикатора с фоном и надписью
+/// </summary>
+public class CustomIndicatorElement : MnemoschemeElement
+{
+    public string BackgroundImagePath { get; set; } = string.Empty;
+    public string BackgroundColor { get; set; } = "#2563EB";
+    public double Width { get; set; } = 150;
+    public double Height { get; set; } = 150;
+    public bool ShowLabel { get; set; } = true;
+    public ushort RegisterAddress { get; set; }
+    public string? TagName { get; set; }
+    public string Unit { get; set; } = string.Empty;
+
+    public CustomIndicatorElement()
+    {
+        Type = ElementType.CustomIndicator;
     }
 }

@@ -14,20 +14,24 @@
             BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
             BorderThickness="1"
             Cursor="Hand"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
             PointerPressed="OnMainButtonPressed"
             PointerReleased="OnMainButtonReleased">
-    <StackPanel Spacing="6" HorizontalAlignment="Center">
+    <Grid RowDefinitions="Auto,*">
       <!-- Название -->
-      <TextBlock Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:CoilButton}}"
+      <TextBlock Grid.Row="0"
+                 Text="{Binding Label, RelativeSource={RelativeSource AncestorType=controls:CoilButton}}"
                  FontWeight="SemiBold" 
                  HorizontalAlignment="Center" 
                  FontSize="11"
                  TextWrapping="Wrap"
                  TextAlignment="Center"
+                 Margin="0,0,0,6"
                  IsVisible="{Binding ShowLabel, RelativeSource={RelativeSource AncestorType=controls:CoilButton}}"/>
       
       <!-- Визуальный индикатор состояния -->
-      <Border CornerRadius="6" BorderThickness="2" Margin="5">
+      <Border Grid.Row="1" CornerRadius="6" BorderThickness="2" Margin="5">
         <Border.BorderBrush>
           <Binding Path="IsActive" RelativeSource="{RelativeSource AncestorType=controls:CoilButton}">
             <Binding.Converter>
@@ -125,7 +129,7 @@
           </TextBlock>
         </Grid>
       </Border>
-    </StackPanel>
+    </Grid>
   </Border>
   
   <!-- Маркеры для изменения размера -->
